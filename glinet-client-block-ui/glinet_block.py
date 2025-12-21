@@ -18,6 +18,8 @@ import urllib3
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+import threading
+import queue
 
 # Try to import python-glinet for authentication
 try:
@@ -66,6 +68,46 @@ def print_debug(message: str, verbose: bool = False):
     """Print debug message."""
     if verbose:
         print_colored(f"DEBUG: {message}", Colors.MAGENTA, verbose)
+
+
+def call_with_timeout(func, timeout_seconds, *args, **kwargs):
+    """
+    Call a function with a timeout using threading.
+    
+    Args:
+        func: Function to call
+        timeout_seconds: Timeout in seconds
+        *args, **kwargs: Arguments to pass to func
+    
+    Returns:
+        Result of func, or raises TimeoutError if timeout exceeded
+    """
+    result_queue = queue.Queue()
+    exception_queue = queue.Queue()
+    
+    def wrapper():
+        try:
+            result = func(*args, **kwargs)
+            result_queue.put(result)
+        except Exception as e:
+            exception_queue.put(e)
+    
+    thread = threading.Thread(target=wrapper, daemon=True)
+    thread.start()
+    thread.join(timeout=timeout_seconds)
+    
+    if thread.is_alive():
+        # Thread is still running, timeout occurred
+        raise TimeoutError(f"Operation timed out after {timeout_seconds} seconds")
+    
+    if not exception_queue.empty():
+        raise exception_queue.get()
+    
+    if not result_queue.empty():
+        return result_queue.get()
+    
+    # Should not reach here
+    raise RuntimeError("Unexpected error in timeout wrapper")
 
 
 class GLiNetRouter:
@@ -274,9 +316,17 @@ class GLiNetRouter:
                 elif hasattr(self.glinet_client, 'session'):
                     self.glinet_client.session.timeout = 15
                 
-                # Login (will prompt for password if not provided)
-                # This may raise requests.exceptions.Timeout or ConnectionError
-                self.glinet_client.login()
+                # Login with timeout wrapper to catch hanging connections
+                # pyglinet.login() can hang without raising exceptions
+                try:
+                    call_with_timeout(self.glinet_client.login, timeout_seconds=15)
+                except TimeoutError as te:
+                    print_error(f"Login timeout after 15 seconds: {te}", self.verbose)
+                    raise requests.exceptions.Timeout(f"Login timed out after 15 seconds")
+                except requests.exceptions.Timeout:
+                    raise  # Re-raise requests timeout
+                except requests.exceptions.ConnectionError:
+                    raise  # Re-raise connection errors
                 
                 # Extract session token from the client
                 # The library stores it internally, we need to get it from the session

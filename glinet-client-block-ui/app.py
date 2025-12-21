@@ -353,6 +353,7 @@ def block_clients():
                 continue
             
             try:
+                logger.info(f"Attempting login to router {router_name} ({router_host})...")
                 login_result = router.login()
                 if not login_result:
                     logger.error(f"Failed to authenticate with router {router_name} ({router_host}) - login() returned False")
@@ -363,8 +364,18 @@ def block_clients():
                         'error': 'Authentication failed'
                     })
                     continue
+                logger.info(f"Successfully logged in to router {router_name} ({router_host})")
             except requests.exceptions.Timeout as e:
-                logger.error(f"Connection timeout to router {router_name} ({router_host}): {e}", exc_info=True)
+                logger.error(f"Connection timeout to router {router_name} ({router_host}) after 15 seconds: {e}", exc_info=True)
+                results.append({
+                    'router': router_host,
+                    'router_name': router_name,
+                    'success': False,
+                    'error': 'Request timed out. Router may be unreachable or slow to respond.'
+                })
+                continue
+            except TimeoutError as e:
+                logger.error(f"Operation timeout to router {router_name} ({router_host}): {e}", exc_info=True)
                 results.append({
                     'router': router_host,
                     'router_name': router_name,
@@ -540,6 +551,7 @@ def unblock_clients():
                 continue
             
             try:
+                logger.info(f"Attempting login to router {router_name} ({router_host})...")
                 login_result = router.login()
                 if not login_result:
                     logger.error(f"Failed to authenticate with router {router_name} ({router_host}) - login() returned False")
@@ -550,8 +562,18 @@ def unblock_clients():
                         'error': 'Authentication failed'
                     })
                     continue
+                logger.info(f"Successfully logged in to router {router_name} ({router_host})")
             except requests.exceptions.Timeout as e:
-                logger.error(f"Connection timeout to router {router_name} ({router_host}): {e}", exc_info=True)
+                logger.error(f"Connection timeout to router {router_name} ({router_host}) after 15 seconds: {e}", exc_info=True)
+                results.append({
+                    'router': router_host,
+                    'router_name': router_name,
+                    'success': False,
+                    'error': 'Request timed out. Router may be unreachable or slow to respond.'
+                })
+                continue
+            except TimeoutError as e:
+                logger.error(f"Operation timeout to router {router_name} ({router_host}): {e}", exc_info=True)
                 results.append({
                     'router': router_host,
                     'router_name': router_name,
