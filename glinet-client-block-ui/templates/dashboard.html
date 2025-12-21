@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en" id="html-root">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GL.iNet Client Block - Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        @font-face {
+            font-family: 'Noto Sans JP';
+            src: url('/static/fonts/NotoSansJP-VariableFont_wght.ttf') format('truetype');
+            font-weight: 100 900;
+            font-style: normal;
+            font-display: swap;
+        }
+        :root {
+            /* Light theme (default) */
+            --bg-primary: #f5f7fa;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f8f9fa;
+            --text-primary: #1a1a1a;
+            --text-secondary: #6c757d;
+            --border-color: #e9ecef;
+            --shadow: rgba(0, 0, 0, 0.08);
+            --shadow-hover: rgba(0, 0, 0, 0.12);
+            --accent: #ff1493;
+            --accent-hover: #e01185;
+        }
+
+        [data-theme="dark"] {
+            /* Dark theme */
+            --bg-primary: #0f1419;
+            --bg-secondary: #1a1f2e;
+            --bg-tertiary: #252b3b;
+            --text-primary: #e4e7eb;
+            --text-secondary: #9ca3af;
+            --border-color: #374151;
+            --shadow: rgba(0, 0, 0, 0.3);
+            --shadow-hover: rgba(0, 0, 0, 0.5);
+            --accent: #ff1493;
+            --accent-hover: #e01185;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            min-height: 100vh;
+            color: var(--text-primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        html[lang="ja"] body,
+        html[lang="ja"] * {
+            font-family: 'Noto Sans JP', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        /* Exclude Material Icons from Japanese font */
+        html[lang="ja"] .material-icons,
+        html[lang="ja"] .material-icons * {
+            font-family: 'Material Icons' !important;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem 2rem;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px var(--shadow);
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .header h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 0.625rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-tertiary);
+            opacity: 0.8;
+        }
+
+        .btn-icon {
+            padding: 0.5rem;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .btn-icon:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .explanation {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px var(--shadow);
+            border-left: 4px solid var(--accent);
+            transition: background-color 0.3s ease;
+        }
+
+        .explanation h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+        }
+
+        .explanation p {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 0.5rem;
+        }
+
+        .explanation ul {
+            color: var(--text-secondary);
+            margin-left: 1.5rem;
+            margin-top: 0.5rem;
+            line-height: 1.8;
+        }
+
+        .router-selector {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px var(--shadow);
+            transition: background-color 0.3s ease;
+        }
+
+        .router-selector label {
+            display: block;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+        .router-selector select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .router-selector select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(255, 20, 147, 0.1);
+        }
+
+        .category-section {
+            margin-bottom: 2rem;
+        }
+
+        .category-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px var(--shadow);
+            transition: all 0.2s ease;
+        }
+
+        .category-card:hover {
+            box-shadow: 0 4px 16px var(--shadow-hover);
+        }
+
+        .category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .category-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .category-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .btn-block {
+            background: #dc3545;
+            color: #ffffff;
+        }
+
+        .btn-block:hover {
+            background: #c82333;
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-unblock {
+            background: #28a745;
+            color: #ffffff;
+        }
+
+        .btn-unblock:hover {
+            background: #218838;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+        .clients-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .client-item {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .client-item:hover {
+            border-color: var(--accent);
+            box-shadow: 0 2px 8px rgba(255, 20, 147, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .client-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .client-mac {
+            font-family: 'Courier New', monospace;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .all-clients-section {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px var(--shadow);
+            border: 2px solid var(--accent);
+            transition: background-color 0.3s ease;
+        }
+
+        .all-clients-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .all-clients-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .alert-success {
+            background: rgba(40, 167, 69, 0.1);
+            border: 1px solid #28a745;
+            color: #28a745;
+        }
+
+        [data-theme="dark"] .alert-success {
+            background: rgba(40, 167, 69, 0.2);
+        }
+
+        .alert-error {
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid #dc3545;
+            color: #dc3545;
+        }
+
+        [data-theme="dark"] .alert-error {
+            background: rgba(220, 53, 69, 0.2);
+        }
+
+        .alert-info {
+            background: rgba(0, 123, 255, 0.1);
+            border: 1px solid #007bff;
+            color: #007bff;
+        }
+
+        [data-theme="dark"] .alert-info {
+            background: rgba(0, 123, 255, 0.2);
+        }
+
+        .spinner {
+            border: 3px solid var(--border-color);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 4px 12px rgba(255, 20, 147, 0.3);
+        }
+
+        .controls {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .controls select {
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-family: inherit;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 data-i18n="title">Client Block Control</h1>
+            <div class="header-actions">
+                <div class="controls">
+                    <button class="btn btn-icon" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                        <span class="material-icons" id="theme-icon">light_mode</span>
+                    </button>
+                    <select id="language-select" onchange="changeLanguage()">
+                        <option value="en">English</option>
+                        <option value="ja">日本語</option>
+                    </select>
+                </div>
+                <a href="{{ url_for('logout') }}" class="btn btn-secondary" data-i18n="logout">
+                    <span class="material-icons" style="font-size: 18px;">logout</span>
+                    <span data-i18n="logout-text">Logout</span>
+                </a>
+            </div>
+        </div>
+
+        <div id="alerts"></div>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <span data-i18n="loading">Loading client lists...</span>
+        </div>
+
+        <div id="content" class="hidden">
+            <!-- Explanation Section -->
+            <div class="explanation">
+                <h2 data-i18n="explanation-title">About This Page</h2>
+                <p data-i18n="explanation-text">This dashboard allows you to block or unblock internet access for specific devices (clients) on your GL.iNet routers. You can manage clients by category or block/unblock all clients at once.</p>
+                <p data-i18n="explanation-how"><strong>How it works:</strong></p>
+                <ul>
+                    <li data-i18n="explanation-1">Select a router from the dropdown above (or choose "All Routers" to affect all routers)</li>
+                    <li data-i18n="explanation-2">Click "Block All" or "Unblock All" to manage all clients at once</li>
+                    <li data-i18n="explanation-3">Or use the category-specific buttons to block/unblock clients in specific categories (e.g., Gaming Devices, TV Devices)</li>
+                    <li data-i18n="explanation-4">Changes are applied immediately to the selected router(s)</li>
+                </ul>
+            </div>
+
+            <!-- Router Selector -->
+            <div class="router-selector">
+                <label for="router-select" data-i18n="router-select-label">Select Router:</label>
+                <select id="router-select" onchange="updateRouterSelection()">
+                    <option value="all" data-i18n="all-routers">All Routers</option>
+                </select>
+            </div>
+
+            <!-- All Clients Section -->
+            <div class="all-clients-section">
+                <div class="all-clients-header">
+                    <div class="all-clients-title" data-i18n="all-clients">All Clients</div>
+                    <div class="category-actions">
+                        <button class="btn btn-block" onclick="blockAll()">
+                            <span class="material-icons" style="font-size: 18px;">block</span>
+                            <span data-i18n="block-all">Block All</span>
+                        </button>
+                        <button class="btn btn-unblock" onclick="unblockAll()">
+                            <span class="material-icons" style="font-size: 18px;">check_circle</span>
+                            <span data-i18n="unblock-all">Unblock All</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="all-clients-list" class="clients-list"></div>
+            </div>
+
+            <!-- Category Sections -->
+            <div id="categories"></div>
+        </div>
+    </div>
+
+    <script>
+        // Translations
+        const translations = {
+            en: {
+                'title': 'Client Block Control',
+                'logout': 'Logout',
+                'logout-text': 'Logout',
+                'loading': 'Loading client lists...',
+                'explanation-title': 'About This Page',
+                'explanation-text': 'This dashboard allows you to block or unblock internet access for specific devices (clients) on your GL.iNet routers. You can manage clients by category or block/unblock all clients at once.',
+                'explanation-how': 'How it works:',
+                'explanation-1': 'Select a router from the dropdown above (or choose "All Routers" to affect all routers)',
+                'explanation-2': 'Click "Block All" or "Unblock All" to manage all clients at once',
+                'explanation-3': 'Or use the category-specific buttons to block/unblock clients in specific categories (e.g., Gaming Devices, TV Devices)',
+                'explanation-4': 'Changes are applied immediately to the selected router(s)',
+                'router-select-label': 'Select Router:',
+                'all-routers': 'All Routers',
+                'all-clients': 'All Clients',
+                'block-all': 'Block All',
+                'unblock-all': 'Unblock All',
+                'block': 'Block',
+                'unblock': 'Unblock',
+                'confirm-block-all': 'Are you sure you want to block ALL clients on {router}?',
+                'confirm-unblock-all': 'Are you sure you want to unblock ALL clients on {router}?',
+                'confirm-block-category': 'Are you sure you want to block all clients in "{category}" on {router}?',
+                'confirm-unblock-category': 'Are you sure you want to unblock all clients in "{category}" on {router}?',
+                'blocking': 'Blocking all clients on {router}...',
+                'unblocking': 'Unblocking all clients on {router}...',
+                'blocking-category': 'Blocking {category} on {router}...',
+                'unblocking-category': 'Unblocking {category} on {router}...',
+                'blocked-success': 'All clients blocked on {routers}! Success: {success}, Failed: {failed}',
+                'unblocked-success': 'All clients unblocked on {routers}! Success: {success}, Failed: {failed}',
+                'category-blocked': '{category} blocked on {routers}! Success: {success}, Failed: {failed}',
+                'category-unblocked': '{category} unblocked on {routers}! Success: {success}, Failed: {failed}',
+                'error': 'Error: {error}'
+            },
+            ja: {
+                'title': 'クライアントブロック制御',
+                'logout': 'ログアウト',
+                'logout-text': 'ログアウト',
+                'loading': 'クライアントリストを読み込み中...',
+                'explanation-title': 'このページについて',
+                'explanation-text': 'このダッシュボードでは、GL.iNetルーター上の特定のデバイス（クライアント）のインターネットアクセスをブロックまたはブロック解除できます。カテゴリ別にクライアントを管理するか、すべてのクライアントを一度にブロック/ブロック解除できます。',
+                'explanation-how': '使い方:',
+                'explanation-1': '上記のドロップダウンからルーターを選択します（または「すべてのルーター」を選択してすべてのルーターに影響を与えます）',
+                'explanation-2': '「すべてブロック」または「すべてブロック解除」をクリックして、すべてのクライアントを一度に管理します',
+                'explanation-3': 'または、カテゴリ固有のボタンを使用して、特定のカテゴリ（例：ゲームデバイス、TVデバイス）のクライアントをブロック/ブロック解除します',
+                'explanation-4': '変更は選択したルーターに即座に適用されます',
+                'router-select-label': 'ルーターを選択:',
+                'all-routers': 'すべてのルーター',
+                'all-clients': 'すべてのクライアント',
+                'block-all': 'すべてブロック',
+                'unblock-all': 'すべてブロック解除',
+                'block': 'ブロック',
+                'unblock': 'ブロック解除',
+                'confirm-block-all': '{router}でALLクライアントをブロックしてもよろしいですか？',
+                'confirm-unblock-all': '{router}でALLクライアントのブロックを解除してもよろしいですか？',
+                'confirm-block-category': '{router}で「{category}」のすべてのクライアントをブロックしてもよろしいですか？',
+                'confirm-unblock-category': '{router}で「{category}」のすべてのクライアントのブロックを解除してもよろしいですか？',
+                'blocking': '{router}ですべてのクライアントをブロック中...',
+                'unblocking': '{router}ですべてのクライアントのブロックを解除中...',
+                'blocking-category': '{router}で{category}をブロック中...',
+                'unblocking-category': '{router}で{category}のブロックを解除中...',
+                'blocked-success': '{routers}ですべてのクライアントをブロックしました！成功: {success}、失敗: {failed}',
+                'unblocked-success': '{routers}ですべてのクライアントのブロックを解除しました！成功: {success}、失敗: {failed}',
+                'category-blocked': '{routers}で{category}をブロックしました！成功: {success}、失敗: {failed}',
+                'category-unblocked': '{routers}で{category}のブロックを解除しました！成功: {success}、失敗: {failed}',
+                'error': 'エラー: {error}'
+            }
+        };
+
+        let allClients = [];
+        let categories = [];
+        let routers = [];
+        let selectedRouter = 'all';
+        let currentLanguage = 'en';
+        let currentTheme = 'dark';
+
+        // Initialize theme and language
+        function init() {
+            // Load theme preference
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            setTheme(savedTheme);
+            
+            // Load language preference
+            const savedLang = localStorage.getItem('language') || 'en';
+            setLanguage(savedLang);
+        }
+
+        function setTheme(theme) {
+            currentTheme = theme;
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('theme', theme);
+            const icon = document.getElementById('theme-icon');
+            icon.textContent = theme === 'dark' ? 'light_mode' : 'dark_mode';
+        }
+
+        function toggleTheme() {
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            setTheme(newTheme);
+        }
+
+        function setLanguage(lang) {
+            currentLanguage = lang;
+            document.documentElement.setAttribute('lang', lang);
+            localStorage.setItem('language', lang);
+            document.getElementById('language-select').value = lang;
+            updateTranslations();
+        }
+
+        function changeLanguage() {
+            const select = document.getElementById('language-select');
+            setLanguage(select.value);
+        }
+
+        function t(key, params = {}) {
+            let text = translations[currentLanguage][key] || translations['en'][key] || key;
+            Object.keys(params).forEach(param => {
+                text = text.replace(`{${param}}`, params[param]);
+            });
+            return text;
+        }
+
+        function updateTranslations() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (el.tagName === 'OPTION') {
+                    el.textContent = t(key);
+                } else {
+                    el.textContent = t(key);
+                }
+            });
+            // Update router select "All Routers" option
+            const allRoutersOption = document.querySelector('#router-select option[value="all"]');
+            if (allRoutersOption) {
+                allRoutersOption.textContent = t('all-routers');
+            }
+        }
+
+        async function loadData() {
+            try {
+                // Load routers
+                const routersRes = await fetch('/api/routers');
+                const routersData = await routersRes.json();
+                routers = routersData.routers || [];
+                populateRouterSelect();
+
+                // Load mapping
+                const mappingRes = await fetch('/api/mapping');
+                const mappingData = await mappingRes.json();
+                categories = mappingData.mapping || [];
+
+                // Load all clients
+                const clientsRes = await fetch('/api/clients?category=all');
+                const clientsData = await clientsRes.json();
+                allClients = clientsData.clients || [];
+
+                renderUI();
+            } catch (error) {
+                showAlert(t('error', { error: error.message }), 'error');
+            } finally {
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('content').classList.remove('hidden');
+            }
+        }
+
+        function populateRouterSelect() {
+            const select = document.getElementById('router-select');
+            select.innerHTML = `<option value="all">${t('all-routers')}</option>`;
+            
+            routers.forEach(router => {
+                const option = document.createElement('option');
+                option.value = router.host;
+                option.textContent = router.name || router.host;
+                select.appendChild(option);
+            });
+        }
+
+        function updateRouterSelection() {
+            const select = document.getElementById('router-select');
+            selectedRouter = select.value;
+        }
+
+        function renderUI() {
+            // Render all clients
+            const allClientsList = document.getElementById('all-clients-list');
+            allClientsList.innerHTML = '';
+            allClients.forEach(client => {
+                const item = document.createElement('div');
+                item.className = 'client-item';
+                item.innerHTML = `
+                    <div class="client-name">${escapeHtml(client.name)}</div>
+                    <div class="client-mac">${escapeHtml(client.mac)}</div>
+                `;
+                allClientsList.appendChild(item);
+            });
+
+            // Render categories
+            const categoriesDiv = document.getElementById('categories');
+            categoriesDiv.innerHTML = '';
+            categories.forEach(category => {
+                const categoryClients = allClients.filter(c => c.category === category.category);
+                if (categoryClients.length === 0) return;
+
+                const section = document.createElement('div');
+                section.className = 'category-section';
+                section.innerHTML = `
+                    <div class="category-card">
+                        <div class="category-header">
+                            <div class="category-title">${escapeHtml(category.category)}</div>
+                            <div class="category-actions">
+                                <button class="btn btn-block" onclick="blockCategory('${escapeHtml(category.category)}')">
+                                    <span class="material-icons" style="font-size: 18px;">block</span>
+                                    <span data-i18n="block">${t('block')}</span>
+                                </button>
+                                <button class="btn btn-unblock" onclick="unblockCategory('${escapeHtml(category.category)}')">
+                                    <span class="material-icons" style="font-size: 18px;">check_circle</span>
+                                    <span data-i18n="unblock">${t('unblock')}</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="clients-list">
+                            ${categoryClients.map(client => `
+                                <div class="client-item">
+                                    <div class="client-name">${escapeHtml(client.name)}</div>
+                                    <div class="client-mac">${escapeHtml(client.mac)}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+                categoriesDiv.appendChild(section);
+            });
+        }
+
+        async function blockAll() {
+            const routerName = getRouterName(selectedRouter);
+            if (!confirm(t('confirm-block-all', { router: routerName }))) return;
+            
+            try {
+                showAlert(t('blocking', { router: routerName }), 'info');
+                const res = await fetch('/api/block', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category: 'all', router: selectedRouter })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    const totalSuccess = data.results.reduce((sum, r) => sum + (r.summary?.success || 0), 0);
+                    const totalFailed = data.results.reduce((sum, r) => sum + (r.summary?.failed || 0), 0);
+                    const routerNames = data.router_names || [];
+                    const routerList = routerNames.length > 0 ? routerNames.join(', ') : routerName;
+                    showAlert(t('blocked-success', { routers: routerList, success: totalSuccess, failed: totalFailed }), 'success');
+                } else {
+                    showAlert(t('error', { error: data.error || 'Unknown error' }), 'error');
+                }
+            } catch (error) {
+                showAlert(t('error', { error: error.message }), 'error');
+            }
+        }
+
+        async function unblockAll() {
+            const routerName = getRouterName(selectedRouter);
+            if (!confirm(t('confirm-unblock-all', { router: routerName }))) return;
+            
+            try {
+                showAlert(t('unblocking', { router: routerName }), 'info');
+                const res = await fetch('/api/unblock', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category: 'all', router: selectedRouter })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    const totalSuccess = data.results.reduce((sum, r) => sum + (r.summary?.success || 0), 0);
+                    const totalFailed = data.results.reduce((sum, r) => sum + (r.summary?.failed || 0), 0);
+                    const routerNames = data.router_names || [];
+                    const routerList = routerNames.length > 0 ? routerNames.join(', ') : routerName;
+                    showAlert(t('unblocked-success', { routers: routerList, success: totalSuccess, failed: totalFailed }), 'success');
+                } else {
+                    showAlert(t('error', { error: data.error || 'Unknown error' }), 'error');
+                }
+            } catch (error) {
+                showAlert(t('error', { error: error.message }), 'error');
+            }
+        }
+
+        async function blockCategory(category) {
+            const routerName = getRouterName(selectedRouter);
+            if (!confirm(t('confirm-block-category', { category: category, router: routerName }))) return;
+            
+            try {
+                showAlert(t('blocking-category', { category: category, router: routerName }), 'info');
+                const res = await fetch('/api/block', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category: category, router: selectedRouter })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    const totalSuccess = data.results.reduce((sum, r) => sum + (r.summary?.success || 0), 0);
+                    const totalFailed = data.results.reduce((sum, r) => sum + (r.summary?.failed || 0), 0);
+                    const routerNames = data.router_names || [];
+                    const routerList = routerNames.length > 0 ? routerNames.join(', ') : routerName;
+                    showAlert(t('category-blocked', { category: category, routers: routerList, success: totalSuccess, failed: totalFailed }), 'success');
+                } else {
+                    showAlert(t('error', { error: data.error || 'Unknown error' }), 'error');
+                }
+            } catch (error) {
+                showAlert(t('error', { error: error.message }), 'error');
+            }
+        }
+
+        async function unblockCategory(category) {
+            const routerName = getRouterName(selectedRouter);
+            if (!confirm(t('confirm-unblock-category', { category: category, router: routerName }))) return;
+            
+            try {
+                showAlert(t('unblocking-category', { category: category, router: routerName }), 'info');
+                const res = await fetch('/api/unblock', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category: category, router: selectedRouter })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    const totalSuccess = data.results.reduce((sum, r) => sum + (r.summary?.success || 0), 0);
+                    const totalFailed = data.results.reduce((sum, r) => sum + (r.summary?.failed || 0), 0);
+                    const routerNames = data.router_names || [];
+                    const routerList = routerNames.length > 0 ? routerNames.join(', ') : routerName;
+                    showAlert(t('category-unblocked', { category: category, routers: routerList, success: totalSuccess, failed: totalFailed }), 'success');
+                } else {
+                    showAlert(t('error', { error: data.error || 'Unknown error' }), 'error');
+                }
+            } catch (error) {
+                showAlert(t('error', { error: error.message }), 'error');
+            }
+        }
+
+        function getRouterName(routerValue) {
+            if (routerValue === 'all') {
+                return t('all-routers');
+            }
+            const router = routers.find(r => r.host === routerValue);
+            return router ? (router.name || router.host) : routerValue;
+        }
+
+        function showAlert(message, type) {
+            const alertsDiv = document.getElementById('alerts');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alertsDiv.appendChild(alert);
+            setTimeout(() => alert.remove(), 5000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize on page load
+        init();
+        loadData();
+    </script>
+</body>
+</html>

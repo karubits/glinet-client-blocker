@@ -1,0 +1,36 @@
+services:
+  glinet-webui:
+    build: .
+    container_name: glinet-client-block-webui
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data/mapping.csv:/app/data/mapping.csv:ro
+      - ./data/clients:/app/data/clients:ro
+      # Optional: mount routers.csv if not using env vars
+      # - ./data/routers.csv:/app/data/routers.csv:ro
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-change-this-secret-key-in-production}
+      - WEBUI_PASSWORD=${WEBUI_PASSWORD:-admin}
+      # Router configuration - use one of these methods:
+      # Method 1: Comma-separated lists
+      # - ROUTER_HOSTS=100.65.142.110,100.122.185.100
+      # - ROUTER_PASSES=password1,password2
+      # Method 2: Numbered variables
+      - ROUTER_HOST_1=${ROUTER_HOST_1:-}
+      - ROUTER_PASS_1=${ROUTER_PASS_1:-}
+      - ROUTER_NAME_1=${ROUTER_NAME_1:-}
+      - ROUTER_HOST_2=${ROUTER_HOST_2:-}
+      - ROUTER_PASS_2=${ROUTER_PASS_2:-}
+      - ROUTER_NAME_2=${ROUTER_NAME_2:-}
+      - ROUTER_HOST_3=${ROUTER_HOST_3:-}
+      - ROUTER_PASS_3=${ROUTER_PASS_3:-}
+      - ROUTER_NAME_3=${ROUTER_NAME_3:-}
+    restart: unless-stopped
+    networks:
+      - glinet-network
+
+networks:
+  glinet-network:
+    driver: bridge
+

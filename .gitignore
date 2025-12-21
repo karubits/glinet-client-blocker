@@ -1,0 +1,70 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Personal Information - DO NOT COMMIT
+.env
+.env.local
+!.env.example
+*.key
+*.pem
+config.ini
+
+# Client Lists - Personal Information
+clients/*.csv
+!clients/*.example.csv
+!clients/README.md
+
+# Router Configuration - Personal Information
+glinet-client-block-script/routers.csv
+!glinet-client-block-script/routers.example.csv
+glinet-client-block-ui/data/routers.csv
+!glinet-client-block-ui/data/routers.example.csv
+
+# Web UI Data - Personal Information
+glinet-client-block-ui/data/clients/*.csv
+!glinet-client-block-ui/data/clients/*.example.csv
+glinet-client-block-ui/data/mapping.csv
+!glinet-client-block-ui/data/mapping.example.csv
+
+# Logs
+*.log
+*.har
+
+# Docker
+.docker/

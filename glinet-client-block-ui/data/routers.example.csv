@@ -1,0 +1,5 @@
+HOST,PASS
+192.168.1.1,YourRouterPassword1
+192.168.1.2,YourRouterPassword2
+
+## Use this file only if you have not set up environment files. It is recommended to use environment files instead of this one.
