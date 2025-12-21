@@ -401,6 +401,145 @@
             font-family: inherit;
             cursor: pointer;
         }
+
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1rem;
+                align-items: flex-start;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .header-actions {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .controls {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .explanation {
+                padding: 1rem;
+                font-size: 0.9rem;
+            }
+
+            .explanation h2 {
+                font-size: 1.1rem;
+            }
+
+            .router-selector {
+                padding: 1rem;
+            }
+
+            .category-card {
+                padding: 1rem;
+            }
+
+            .category-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .category-actions {
+                width: 100%;
+                flex-direction: column;
+            }
+
+            .category-actions .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .all-clients-section {
+                padding: 1rem;
+            }
+
+            .all-clients-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+
+            .all-clients-header .category-actions {
+                width: 100%;
+                flex-direction: column;
+            }
+
+            .clients-list {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+
+            .client-item {
+                padding: 0.75rem;
+            }
+
+            .btn {
+                padding: 0.75rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .alert {
+                font-size: 0.85rem;
+                padding: 0.75rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 0.75rem;
+            }
+
+            .header {
+                padding: 0.75rem;
+            }
+
+            .header h1 {
+                font-size: 1.25rem;
+            }
+
+            .explanation {
+                padding: 0.75rem;
+                font-size: 0.85rem;
+            }
+
+            .router-selector {
+                padding: 0.75rem;
+            }
+
+            .category-card {
+                padding: 0.75rem;
+            }
+
+            .all-clients-section {
+                padding: 0.75rem;
+            }
+
+            .btn {
+                padding: 0.625rem 0.875rem;
+                font-size: 0.8rem;
+            }
+
+            .client-name {
+                font-size: 0.9rem;
+            }
+
+            .client-mac {
+                font-size: 0.75rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -724,16 +863,31 @@
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    const totalSuccess = data.results.reduce((sum, r) => sum + (r.summary?.success || 0), 0);
-                    const totalFailed = data.results.reduce((sum, r) => sum + (r.summary?.failed || 0), 0);
-                    const routerNames = data.router_names || [];
-                    const routerList = routerNames.length > 0 ? routerNames.join(', ') : routerName;
-                    showAlert(t('blocked-success', { routers: routerList, success: totalSuccess, failed: totalFailed }), 'success');
+                    // Check for router connection errors
+                    const failedRouters = data.results.filter(r => !r.success);
+                    if (failedRouters.length > 0) {
+                        failedRouters.forEach(router => {
+                            showAlert(`${router.router_name || router.router}: ${router.error || 'Connection failed'}`, 'error');
+                        });
+                    }
+                    
+                    const successfulRouters = data.results.filter(r => r.success);
+                    if (successfulRouters.length > 0) {
+                        const totalSuccess = successfulRouters.reduce((sum, r) => sum + (r.summary?.success || 0), 0);
+                        const totalFailed = successfulRouters.reduce((sum, r) => sum + (r.summary?.failed || 0), 0);
+                        const routerNames = successfulRouters.map(r => r.router_name || r.router);
+                        const routerList = routerNames.length > 0 ? routerNames.join(', ') : routerName;
+                        showAlert(t('blocked-success', { routers: routerList, success: totalSuccess, failed: totalFailed }), 'success');
+                    }
                 } else {
                     showAlert(t('error', { error: data.error || 'Unknown error' }), 'error');
                 }
             } catch (error) {
-                showAlert(t('error', { error: error.message }), 'error');
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    showAlert('Network error: Failed to connect to server. Please check your connection.', 'error');
+                } else {
+                    showAlert(t('error', { error: error.message }), 'error');
+                }
             }
         }
 
@@ -750,16 +904,31 @@
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    const totalSuccess = data.results.reduce((sum, r) => sum + (r.summary?.success || 0), 0);
-                    const totalFailed = data.results.reduce((sum, r) => sum + (r.summary?.failed || 0), 0);
-                    const routerNames = data.router_names || [];
-                    const routerList = routerNames.length > 0 ? routerNames.join(', ') : routerName;
-                    showAlert(t('unblocked-success', { routers: routerList, success: totalSuccess, failed: totalFailed }), 'success');
+                    // Check for router connection errors
+                    const failedRouters = data.results.filter(r => !r.success);
+                    if (failedRouters.length > 0) {
+                        failedRouters.forEach(router => {
+                            showAlert(`${router.router_name || router.router}: ${router.error || 'Connection failed'}`, 'error');
+                        });
+                    }
+                    
+                    const successfulRouters = data.results.filter(r => r.success);
+                    if (successfulRouters.length > 0) {
+                        const totalSuccess = successfulRouters.reduce((sum, r) => sum + (r.summary?.success || 0), 0);
+                        const totalFailed = successfulRouters.reduce((sum, r) => sum + (r.summary?.failed || 0), 0);
+                        const routerNames = successfulRouters.map(r => r.router_name || r.router);
+                        const routerList = routerNames.length > 0 ? routerNames.join(', ') : routerName;
+                        showAlert(t('unblocked-success', { routers: routerList, success: totalSuccess, failed: totalFailed }), 'success');
+                    }
                 } else {
                     showAlert(t('error', { error: data.error || 'Unknown error' }), 'error');
                 }
             } catch (error) {
-                showAlert(t('error', { error: error.message }), 'error');
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    showAlert('Network error: Failed to connect to server. Please check your connection.', 'error');
+                } else {
+                    showAlert(t('error', { error: error.message }), 'error');
+                }
             }
         }
 
@@ -776,16 +945,31 @@
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    const totalSuccess = data.results.reduce((sum, r) => sum + (r.summary?.success || 0), 0);
-                    const totalFailed = data.results.reduce((sum, r) => sum + (r.summary?.failed || 0), 0);
-                    const routerNames = data.router_names || [];
-                    const routerList = routerNames.length > 0 ? routerNames.join(', ') : routerName;
-                    showAlert(t('category-blocked', { category: category, routers: routerList, success: totalSuccess, failed: totalFailed }), 'success');
+                    // Check for router connection errors
+                    const failedRouters = data.results.filter(r => !r.success);
+                    if (failedRouters.length > 0) {
+                        failedRouters.forEach(router => {
+                            showAlert(`${router.router_name || router.router}: ${router.error || 'Connection failed'}`, 'error');
+                        });
+                    }
+                    
+                    const successfulRouters = data.results.filter(r => r.success);
+                    if (successfulRouters.length > 0) {
+                        const totalSuccess = successfulRouters.reduce((sum, r) => sum + (r.summary?.success || 0), 0);
+                        const totalFailed = successfulRouters.reduce((sum, r) => sum + (r.summary?.failed || 0), 0);
+                        const routerNames = successfulRouters.map(r => r.router_name || r.router);
+                        const routerList = routerNames.length > 0 ? routerNames.join(', ') : routerName;
+                        showAlert(t('category-blocked', { category: category, routers: routerList, success: totalSuccess, failed: totalFailed }), 'success');
+                    }
                 } else {
                     showAlert(t('error', { error: data.error || 'Unknown error' }), 'error');
                 }
             } catch (error) {
-                showAlert(t('error', { error: error.message }), 'error');
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    showAlert('Network error: Failed to connect to server. Please check your connection.', 'error');
+                } else {
+                    showAlert(t('error', { error: error.message }), 'error');
+                }
             }
         }
 
@@ -802,16 +986,31 @@
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    const totalSuccess = data.results.reduce((sum, r) => sum + (r.summary?.success || 0), 0);
-                    const totalFailed = data.results.reduce((sum, r) => sum + (r.summary?.failed || 0), 0);
-                    const routerNames = data.router_names || [];
-                    const routerList = routerNames.length > 0 ? routerNames.join(', ') : routerName;
-                    showAlert(t('category-unblocked', { category: category, routers: routerList, success: totalSuccess, failed: totalFailed }), 'success');
+                    // Check for router connection errors
+                    const failedRouters = data.results.filter(r => !r.success);
+                    if (failedRouters.length > 0) {
+                        failedRouters.forEach(router => {
+                            showAlert(`${router.router_name || router.router}: ${router.error || 'Connection failed'}`, 'error');
+                        });
+                    }
+                    
+                    const successfulRouters = data.results.filter(r => r.success);
+                    if (successfulRouters.length > 0) {
+                        const totalSuccess = successfulRouters.reduce((sum, r) => sum + (r.summary?.success || 0), 0);
+                        const totalFailed = successfulRouters.reduce((sum, r) => sum + (r.summary?.failed || 0), 0);
+                        const routerNames = successfulRouters.map(r => r.router_name || r.router);
+                        const routerList = routerNames.length > 0 ? routerNames.join(', ') : routerName;
+                        showAlert(t('category-unblocked', { category: category, routers: routerList, success: totalSuccess, failed: totalFailed }), 'success');
+                    }
                 } else {
                     showAlert(t('error', { error: data.error || 'Unknown error' }), 'error');
                 }
             } catch (error) {
-                showAlert(t('error', { error: error.message }), 'error');
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    showAlert('Network error: Failed to connect to server. Please check your connection.', 'error');
+                } else {
+                    showAlert(t('error', { error: error.message }), 'error');
+                }
             }
         }
 

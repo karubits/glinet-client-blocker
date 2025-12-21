@@ -15,6 +15,7 @@ from typing import List, Dict, Tuple, Optional
 
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 from werkzeug.security import check_password_hash, generate_password_hash
+import requests
 
 # Import glinet_block from same directory
 from glinet_block import (
@@ -333,21 +334,59 @@ def block_clients():
         results = []
         for router_host, password, router_name in routers:
             logger.info(f"Connecting to router: {router_host}")
-            router = GLiNetRouter(
-                host=router_host,
-                username='root',
-                password=password,
-                verify_ssl=False,
-                verbose=False
-            )
-            
-            if not router.login():
-                logger.error(f"Failed to authenticate with router {router_name} ({router_host})")
+            try:
+                router = GLiNetRouter(
+                    host=router_host,
+                    username='root',
+                    password=password,
+                    verify_ssl=False,
+                    verbose=False
+                )
+            except Exception as e:
+                logger.error(f"Failed to initialize router connection to {router_name} ({router_host}): {e}")
                 results.append({
                     'router': router_host,
                     'router_name': router_name,
                     'success': False,
-                    'error': 'Authentication failed'
+                    'error': f'Failed to connect: {str(e)}'
+                })
+                continue
+            
+            try:
+                if not router.login():
+                    logger.error(f"Failed to authenticate with router {router_name} ({router_host})")
+                    results.append({
+                        'router': router_host,
+                        'router_name': router_name,
+                        'success': False,
+                        'error': 'Authentication failed'
+                    })
+                    continue
+            except requests.exceptions.Timeout as e:
+                logger.error(f"Connection timeout to router {router_name} ({router_host}): {e}")
+                results.append({
+                    'router': router_host,
+                    'router_name': router_name,
+                    'success': False,
+                    'error': 'Request timed out. Router may be unreachable or slow to respond.'
+                })
+                continue
+            except requests.exceptions.ConnectionError as e:
+                logger.error(f"Connection error to router {router_name} ({router_host}): {e}")
+                results.append({
+                    'router': router_host,
+                    'router_name': router_name,
+                    'success': False,
+                    'error': 'Router unreachable. Please check if the router is online and accessible.'
+                })
+                continue
+            except Exception as e:
+                logger.error(f"Unexpected error connecting to router {router_name} ({router_host}): {e}", exc_info=True)
+                results.append({
+                    'router': router_host,
+                    'router_name': router_name,
+                    'success': False,
+                    'error': f'Connection failed: {str(e)}'
                 })
                 continue
             
@@ -356,30 +395,35 @@ def block_clients():
             success_count = 0
             fail_count = 0
             
-            for client in clients:
-                mac = client['mac']
-                name = client.get('name', 'Unknown')
-                
-                logger.info(f"Blocking {name} ({mac}) on {router_name}")
-                if router.block_client(mac):
-                    logger.info(f"✓ Successfully blocked {name} ({mac}) on {router_name}")
-                    router_results.append({
-                        'mac': mac,
-                        'name': name,
-                        'success': True
-                    })
-                    success_count += 1
-                else:
-                    logger.error(f"✗ Failed to block {name} ({mac}) on {router_name}")
-                    router_results.append({
-                        'mac': mac,
-                        'name': name,
-                        'success': False,
-                        'error': 'Block failed'
-                    })
-                    fail_count += 1
+            try:
+                for client in clients:
+                    mac = client['mac']
+                    name = client.get('name', 'Unknown')
+                    
+                    logger.info(f"Blocking {name} ({mac}) on {router_name}")
+                    if router.block_client(mac):
+                        logger.info(f"✓ Successfully blocked {name} ({mac}) on {router_name}")
+                        router_results.append({
+                            'mac': mac,
+                            'name': name,
+                            'success': True
+                        })
+                        success_count += 1
+                    else:
+                        logger.error(f"✗ Failed to block {name} ({mac}) on {router_name}")
+                        router_results.append({
+                            'mac': mac,
+                            'name': name,
+                            'success': False,
+                            'error': 'Block failed'
+                        })
+                        fail_count += 1
+            finally:
+                try:
+                    router.logout()
+                except:
+                    pass
             
-            router.logout()
             logger.info(f"Router {router_name}: {success_count} successful, {fail_count} failed")
             
             results.append({
@@ -449,21 +493,59 @@ def unblock_clients():
         results = []
         for router_host, password, router_name in routers:
             logger.info(f"Connecting to router: {router_host}")
-            router = GLiNetRouter(
-                host=router_host,
-                username='root',
-                password=password,
-                verify_ssl=False,
-                verbose=False
-            )
-            
-            if not router.login():
-                logger.error(f"Failed to authenticate with router {router_name} ({router_host})")
+            try:
+                router = GLiNetRouter(
+                    host=router_host,
+                    username='root',
+                    password=password,
+                    verify_ssl=False,
+                    verbose=False
+                )
+            except Exception as e:
+                logger.error(f"Failed to initialize router connection to {router_name} ({router_host}): {e}")
                 results.append({
                     'router': router_host,
                     'router_name': router_name,
                     'success': False,
-                    'error': 'Authentication failed'
+                    'error': f'Failed to connect: {str(e)}'
+                })
+                continue
+            
+            try:
+                if not router.login():
+                    logger.error(f"Failed to authenticate with router {router_name} ({router_host})")
+                    results.append({
+                        'router': router_host,
+                        'router_name': router_name,
+                        'success': False,
+                        'error': 'Authentication failed'
+                    })
+                    continue
+            except requests.exceptions.Timeout as e:
+                logger.error(f"Connection timeout to router {router_name} ({router_host}): {e}")
+                results.append({
+                    'router': router_host,
+                    'router_name': router_name,
+                    'success': False,
+                    'error': 'Request timed out. Router may be unreachable or slow to respond.'
+                })
+                continue
+            except requests.exceptions.ConnectionError as e:
+                logger.error(f"Connection error to router {router_name} ({router_host}): {e}")
+                results.append({
+                    'router': router_host,
+                    'router_name': router_name,
+                    'success': False,
+                    'error': 'Router unreachable. Please check if the router is online and accessible.'
+                })
+                continue
+            except Exception as e:
+                logger.error(f"Unexpected error connecting to router {router_name} ({router_host}): {e}", exc_info=True)
+                results.append({
+                    'router': router_host,
+                    'router_name': router_name,
+                    'success': False,
+                    'error': f'Connection failed: {str(e)}'
                 })
                 continue
             
@@ -472,30 +554,35 @@ def unblock_clients():
             success_count = 0
             fail_count = 0
             
-            for client in clients:
-                mac = client['mac']
-                name = client.get('name', 'Unknown')
-                
-                logger.info(f"Unblocking {name} ({mac}) on {router_name}")
-                if router.unblock_client(mac):
-                    logger.info(f"✓ Successfully unblocked {name} ({mac}) on {router_name}")
-                    router_results.append({
-                        'mac': mac,
-                        'name': name,
-                        'success': True
-                    })
-                    success_count += 1
-                else:
-                    logger.error(f"✗ Failed to unblock {name} ({mac}) on {router_name}")
-                    router_results.append({
-                        'mac': mac,
-                        'name': name,
-                        'success': False,
-                        'error': 'Unblock failed'
-                    })
-                    fail_count += 1
+            try:
+                for client in clients:
+                    mac = client['mac']
+                    name = client.get('name', 'Unknown')
+                    
+                    logger.info(f"Unblocking {name} ({mac}) on {router_name}")
+                    if router.unblock_client(mac):
+                        logger.info(f"✓ Successfully unblocked {name} ({mac}) on {router_name}")
+                        router_results.append({
+                            'mac': mac,
+                            'name': name,
+                            'success': True
+                        })
+                        success_count += 1
+                    else:
+                        logger.error(f"✗ Failed to unblock {name} ({mac}) on {router_name}")
+                        router_results.append({
+                            'mac': mac,
+                            'name': name,
+                            'success': False,
+                            'error': 'Unblock failed'
+                        })
+                        fail_count += 1
+            finally:
+                try:
+                    router.logout()
+                except:
+                    pass
             
-            router.logout()
             logger.info(f"Router {router_name}: {success_count} successful, {fail_count} failed")
             
             results.append({
