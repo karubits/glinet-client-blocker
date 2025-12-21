@@ -1001,7 +1001,25 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ category: 'all', router: selectedRouter })
                 });
-                const data = await res.json();
+                
+                let data;
+                const contentType = res.headers.get('content-type');
+                const responseText = await res.text();
+                
+                if (contentType && contentType.includes('application/json')) {
+                    try {
+                        data = JSON.parse(responseText);
+                    } catch (jsonError) {
+                        console.error('JSON parse error:', jsonError, 'Response text:', responseText);
+                        showAlert(t('error', { error: `Server error: ${res.status} ${res.statusText}. Invalid JSON response.` }), 'error');
+                        return;
+                    }
+                } else {
+                    console.error('Non-JSON response:', responseText);
+                    showAlert(t('error', { error: `Server error: ${res.status} ${res.statusText}` }), 'error');
+                    return;
+                }
+                
                 if (res.ok) {
                     // Check for router connection errors
                     const failedRouters = data.results.filter(r => !r.success);
@@ -1025,6 +1043,8 @@
             } catch (error) {
                 if (error.name === 'TypeError' && error.message.includes('fetch')) {
                     showAlert('Network error: Failed to connect to server. Please check your connection.', 'error');
+                } else if (error.name === 'SyntaxError' && error.message.includes('JSON')) {
+                    showAlert('Server returned invalid response. Please try again.', 'error');
                 } else {
                     showAlert(t('error', { error: error.message }), 'error');
                 }
@@ -1042,7 +1062,25 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ category: 'all', router: selectedRouter })
                 });
-                const data = await res.json();
+                
+                let data;
+                const contentType = res.headers.get('content-type');
+                const responseText = await res.text();
+                
+                if (contentType && contentType.includes('application/json')) {
+                    try {
+                        data = JSON.parse(responseText);
+                    } catch (jsonError) {
+                        console.error('JSON parse error:', jsonError, 'Response text:', responseText);
+                        showAlert(t('error', { error: `Server error: ${res.status} ${res.statusText}. Invalid JSON response.` }), 'error');
+                        return;
+                    }
+                } else {
+                    console.error('Non-JSON response:', responseText);
+                    showAlert(t('error', { error: `Server error: ${res.status} ${res.statusText}` }), 'error');
+                    return;
+                }
+                
                 if (res.ok) {
                     // Check for router connection errors
                     const failedRouters = data.results.filter(r => !r.success);
@@ -1066,6 +1104,8 @@
             } catch (error) {
                 if (error.name === 'TypeError' && error.message.includes('fetch')) {
                     showAlert('Network error: Failed to connect to server. Please check your connection.', 'error');
+                } else if (error.name === 'SyntaxError' && error.message.includes('JSON')) {
+                    showAlert('Server returned invalid response. Please try again.', 'error');
                 } else {
                     showAlert(t('error', { error: error.message }), 'error');
                 }
@@ -1083,7 +1123,25 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ category: category, router: selectedRouter })
                 });
-                const data = await res.json();
+                
+                let data;
+                const contentType = res.headers.get('content-type');
+                const responseText = await res.text();
+                
+                if (contentType && contentType.includes('application/json')) {
+                    try {
+                        data = JSON.parse(responseText);
+                    } catch (jsonError) {
+                        console.error('JSON parse error:', jsonError, 'Response text:', responseText);
+                        showAlert(t('error', { error: `Server error: ${res.status} ${res.statusText}. Invalid JSON response.` }), 'error');
+                        return;
+                    }
+                } else {
+                    console.error('Non-JSON response:', responseText);
+                    showAlert(t('error', { error: `Server error: ${res.status} ${res.statusText}` }), 'error');
+                    return;
+                }
+                
                 if (res.ok) {
                     // Check for router connection errors
                     const failedRouters = data.results.filter(r => !r.success);
@@ -1107,6 +1165,8 @@
             } catch (error) {
                 if (error.name === 'TypeError' && error.message.includes('fetch')) {
                     showAlert('Network error: Failed to connect to server. Please check your connection.', 'error');
+                } else if (error.name === 'SyntaxError' && error.message.includes('JSON')) {
+                    showAlert('Server returned invalid response. Please try again.', 'error');
                 } else {
                     showAlert(t('error', { error: error.message }), 'error');
                 }
@@ -1124,7 +1184,25 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ category: category, router: selectedRouter })
                 });
-                const data = await res.json();
+                
+                let data;
+                const contentType = res.headers.get('content-type');
+                const responseText = await res.text();
+                
+                if (contentType && contentType.includes('application/json')) {
+                    try {
+                        data = JSON.parse(responseText);
+                    } catch (jsonError) {
+                        console.error('JSON parse error:', jsonError, 'Response text:', responseText);
+                        showAlert(t('error', { error: `Server error: ${res.status} ${res.statusText}. Invalid JSON response.` }), 'error');
+                        return;
+                    }
+                } else {
+                    console.error('Non-JSON response:', responseText);
+                    showAlert(t('error', { error: `Server error: ${res.status} ${res.statusText}` }), 'error');
+                    return;
+                }
+                
                 if (res.ok) {
                     // Check for router connection errors
                     const failedRouters = data.results.filter(r => !r.success);
@@ -1148,6 +1226,8 @@
             } catch (error) {
                 if (error.name === 'TypeError' && error.message.includes('fetch')) {
                     showAlert('Network error: Failed to connect to server. Please check your connection.', 'error');
+                } else if (error.name === 'SyntaxError' && error.message.includes('JSON')) {
+                    showAlert('Server returned invalid response. Please try again.', 'error');
                 } else {
                     showAlert(t('error', { error: error.message }), 'error');
                 }
