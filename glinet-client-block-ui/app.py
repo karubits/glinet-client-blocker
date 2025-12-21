@@ -329,7 +329,7 @@ def block_clients():
             if not routers:
                 return jsonify({'error': f'Router "{router_selection}" not found'}), 400
         
-        logger.info(f"Blocking {len(clients)} client(s) in category '{category}' on {len(routers)} router(s)")
+            logger.info(f"Blocking {len(clients)} client(s) in category '{category}' on {len(routers)} router(s)")
         
         results = []
         for router_host, password, router_name in routers:
@@ -343,7 +343,7 @@ def block_clients():
                     verbose=False
                 )
             except Exception as e:
-                logger.error(f"Failed to initialize router connection to {router_name} ({router_host}): {e}")
+                logger.error(f"Failed to initialize router connection to {router_name} ({router_host}): {e}", exc_info=True)
                 results.append({
                     'router': router_host,
                     'router_name': router_name,
@@ -353,8 +353,9 @@ def block_clients():
                 continue
             
             try:
-                if not router.login():
-                    logger.error(f"Failed to authenticate with router {router_name} ({router_host})")
+                login_result = router.login()
+                if not login_result:
+                    logger.error(f"Failed to authenticate with router {router_name} ({router_host}) - login() returned False")
                     results.append({
                         'router': router_host,
                         'router_name': router_name,
@@ -363,7 +364,7 @@ def block_clients():
                     })
                     continue
             except requests.exceptions.Timeout as e:
-                logger.error(f"Connection timeout to router {router_name} ({router_host}): {e}")
+                logger.error(f"Connection timeout to router {router_name} ({router_host}): {e}", exc_info=True)
                 results.append({
                     'router': router_host,
                     'router_name': router_name,
@@ -372,22 +373,49 @@ def block_clients():
                 })
                 continue
             except requests.exceptions.ConnectionError as e:
-                logger.error(f"Connection error to router {router_name} ({router_host}): {e}")
-                results.append({
-                    'router': router_host,
-                    'router_name': router_name,
-                    'success': False,
-                    'error': 'Router unreachable. Please check if the router is online and accessible.'
-                })
+                logger.error(f"Connection error to router {router_name} ({router_host}): {e}", exc_info=True)
+                error_msg = str(e).lower()
+                if 'timeout' in error_msg or 'timed out' in error_msg:
+                    results.append({
+                        'router': router_host,
+                        'router_name': router_name,
+                        'success': False,
+                        'error': 'Request timed out. Router may be unreachable or slow to respond.'
+                    })
+                else:
+                    results.append({
+                        'router': router_host,
+                        'router_name': router_name,
+                        'success': False,
+                        'error': 'Router unreachable. Please check if the router is online and accessible.'
+                    })
                 continue
             except Exception as e:
-                logger.error(f"Unexpected error connecting to router {router_name} ({router_host}): {e}", exc_info=True)
-                results.append({
-                    'router': router_host,
-                    'router_name': router_name,
-                    'success': False,
-                    'error': f'Connection failed: {str(e)}'
-                })
+                error_str = str(e).lower()
+                if 'timeout' in error_str or 'timed out' in error_str:
+                    logger.error(f"Timeout error connecting to router {router_name} ({router_host}): {e}", exc_info=True)
+                    results.append({
+                        'router': router_host,
+                        'router_name': router_name,
+                        'success': False,
+                        'error': 'Request timed out. Router may be unreachable or slow to respond.'
+                    })
+                elif 'connection' in error_str or 'unreachable' in error_str:
+                    logger.error(f"Connection error to router {router_name} ({router_host}): {e}", exc_info=True)
+                    results.append({
+                        'router': router_host,
+                        'router_name': router_name,
+                        'success': False,
+                        'error': 'Router unreachable. Please check if the router is online and accessible.'
+                    })
+                else:
+                    logger.error(f"Unexpected error connecting to router {router_name} ({router_host}): {e}", exc_info=True)
+                    results.append({
+                        'router': router_host,
+                        'router_name': router_name,
+                        'success': False,
+                        'error': f'Connection failed: {str(e)}'
+                    })
                 continue
             
             logger.info(f"Successfully authenticated with router {router_name} ({router_host})")
@@ -502,7 +530,7 @@ def unblock_clients():
                     verbose=False
                 )
             except Exception as e:
-                logger.error(f"Failed to initialize router connection to {router_name} ({router_host}): {e}")
+                logger.error(f"Failed to initialize router connection to {router_name} ({router_host}): {e}", exc_info=True)
                 results.append({
                     'router': router_host,
                     'router_name': router_name,
@@ -512,8 +540,9 @@ def unblock_clients():
                 continue
             
             try:
-                if not router.login():
-                    logger.error(f"Failed to authenticate with router {router_name} ({router_host})")
+                login_result = router.login()
+                if not login_result:
+                    logger.error(f"Failed to authenticate with router {router_name} ({router_host}) - login() returned False")
                     results.append({
                         'router': router_host,
                         'router_name': router_name,
@@ -522,7 +551,7 @@ def unblock_clients():
                     })
                     continue
             except requests.exceptions.Timeout as e:
-                logger.error(f"Connection timeout to router {router_name} ({router_host}): {e}")
+                logger.error(f"Connection timeout to router {router_name} ({router_host}): {e}", exc_info=True)
                 results.append({
                     'router': router_host,
                     'router_name': router_name,
@@ -531,22 +560,49 @@ def unblock_clients():
                 })
                 continue
             except requests.exceptions.ConnectionError as e:
-                logger.error(f"Connection error to router {router_name} ({router_host}): {e}")
-                results.append({
-                    'router': router_host,
-                    'router_name': router_name,
-                    'success': False,
-                    'error': 'Router unreachable. Please check if the router is online and accessible.'
-                })
+                logger.error(f"Connection error to router {router_name} ({router_host}): {e}", exc_info=True)
+                error_msg = str(e).lower()
+                if 'timeout' in error_msg or 'timed out' in error_msg:
+                    results.append({
+                        'router': router_host,
+                        'router_name': router_name,
+                        'success': False,
+                        'error': 'Request timed out. Router may be unreachable or slow to respond.'
+                    })
+                else:
+                    results.append({
+                        'router': router_host,
+                        'router_name': router_name,
+                        'success': False,
+                        'error': 'Router unreachable. Please check if the router is online and accessible.'
+                    })
                 continue
             except Exception as e:
-                logger.error(f"Unexpected error connecting to router {router_name} ({router_host}): {e}", exc_info=True)
-                results.append({
-                    'router': router_host,
-                    'router_name': router_name,
-                    'success': False,
-                    'error': f'Connection failed: {str(e)}'
-                })
+                error_str = str(e).lower()
+                if 'timeout' in error_str or 'timed out' in error_str:
+                    logger.error(f"Timeout error connecting to router {router_name} ({router_host}): {e}", exc_info=True)
+                    results.append({
+                        'router': router_host,
+                        'router_name': router_name,
+                        'success': False,
+                        'error': 'Request timed out. Router may be unreachable or slow to respond.'
+                    })
+                elif 'connection' in error_str or 'unreachable' in error_str:
+                    logger.error(f"Connection error to router {router_name} ({router_host}): {e}", exc_info=True)
+                    results.append({
+                        'router': router_host,
+                        'router_name': router_name,
+                        'success': False,
+                        'error': 'Router unreachable. Please check if the router is online and accessible.'
+                    })
+                else:
+                    logger.error(f"Unexpected error connecting to router {router_name} ({router_host}): {e}", exc_info=True)
+                    results.append({
+                        'router': router_host,
+                        'router_name': router_name,
+                        'success': False,
+                        'error': f'Connection failed: {str(e)}'
+                    })
                 continue
             
             logger.info(f"Successfully authenticated with router {router_name} ({router_host})")

@@ -267,7 +267,15 @@ class GLiNetRouter:
                     verify_ssl_certificate=self.verify_ssl
                 )
                 
+                # Try to set timeout on the underlying session if possible
+                # pyglinet uses requests internally
+                if hasattr(self.glinet_client, '_session'):
+                    self.glinet_client._session.timeout = 15
+                elif hasattr(self.glinet_client, 'session'):
+                    self.glinet_client.session.timeout = 15
+                
                 # Login (will prompt for password if not provided)
+                # This may raise requests.exceptions.Timeout or ConnectionError
                 self.glinet_client.login()
                 
                 # Extract session token from the client
@@ -288,10 +296,28 @@ class GLiNetRouter:
                 print_success(f"Authenticated with {self.host} using python-glinet", self.verbose)
                 return True
                 
+            except requests.exceptions.Timeout as e:
+                # Re-raise timeout errors so caller can handle them
+                print_error(f"Connection timeout during login to {self.host}: {e}", self.verbose)
+                raise
+            except requests.exceptions.ConnectionError as e:
+                # Re-raise connection errors so caller can handle them
+                print_error(f"Connection error during login to {self.host}: {e}", self.verbose)
+                raise
             except Exception as e:
-                print_warning(f"python-glinet authentication failed: {e}", self.verbose)
-                print_info("Falling back to custom authentication...", self.verbose)
-                # Fall through to custom implementation
+                # Check if it's a timeout or connection-related error
+                error_str = str(e).lower()
+                if 'timeout' in error_str or 'timed out' in error_str:
+                    print_error(f"Login timeout to {self.host}: {e}", self.verbose)
+                    raise requests.exceptions.Timeout(f"Login timed out: {e}")
+                elif 'connection' in error_str or 'unreachable' in error_str or 'resolve' in error_str:
+                    print_error(f"Connection error to {self.host}: {e}", self.verbose)
+                    raise requests.exceptions.ConnectionError(f"Connection failed: {e}")
+                else:
+                    # For other exceptions, log and return False
+                    print_warning(f"python-glinet authentication failed to {self.host}: {e}", self.verbose)
+                    print_info("Falling back to custom authentication...", self.verbose)
+                    # Fall through to custom implementation
         
         # Fallback: Custom authentication (may not work correctly)
         print_error("python-glinet library not available. Please install it:", self.verbose)
