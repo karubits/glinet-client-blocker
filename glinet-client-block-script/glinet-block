@@ -1,0 +1,16 @@
+#!/bin/sh
+# Wrapper script for glinet_block.py that works with any shell (bash, fish, zsh, etc.)
+# This script automatically uses the virtual environment Python
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+VENV_PYTHON="$SCRIPT_DIR/venv/bin/python3"
+SCRIPT_FILE="$SCRIPT_DIR/glinet_block.py"
+
+# Check if venv exists
+if [ -f "$VENV_PYTHON" ]; then
+    # Use venv python
+    exec "$VENV_PYTHON" "$SCRIPT_FILE" "$@"
+else
+    # Fallback to system python
+    exec python3 "$SCRIPT_FILE" "$@"
+fi
