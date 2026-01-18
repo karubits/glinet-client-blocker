@@ -1,0 +1,59 @@
+# service-blocker.yaml
+# Configuration for network-wide service blocking via AdGuard Home
+
+schedule:
+  time_zone: Asia/Tokyo
+
+services:
+  - 4chan
+  - battle_net
+  - blizzard_entertainment
+  - dailymotion
+  - crunchyroll
+  - discord
+  - disneyplus
+  - ebay
+  - electronic_arts
+  - epic_games
+  - gog
+  - fifa
+  - globoplay
+  - flickr
+  - iqiyi
+  - kakaotalk
+  - kik
+  - lazada
+  - leagueoflegends
+  - kook
+  - lionsgateplus
+  - mastodon
+  - mail_ru
+  - looke
+  - mercado_libre
+  - minecraft
+  - nebula
+  - nintendo
+  - netflix
+  - ok
+  - olvid
+  - onlyfans
+  - origin
+  - paramountplus
+  - playstation
+  - plenty_of_fish
+  - pluto_tv
+  - plex
+  - privacy
+  - reddit
+  - qq
+  - riot_games
+  - rockstar_games
+  - samsung_tv_plus
+  - steam
+  - tinder
+  - twitch
+  - twitter
+  - xiaohongshu
+  - zhihu
+  - xboxlive
+  - youtube
