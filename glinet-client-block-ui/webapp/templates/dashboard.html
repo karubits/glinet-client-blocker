@@ -467,6 +467,114 @@
             box-shadow: 0 4px 12px rgba(255, 20, 147, 0.3);
         }
 
+        /* Service Block Control Section */
+        .service-block-section {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px var(--shadow);
+            border: 2px solid var(--accent);
+            transition: background-color 0.3s ease;
+        }
+
+        .service-block-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+            gap: 1rem;
+        }
+
+        .service-block-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .service-block-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .service-block-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .service-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .service-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 2px 8px rgba(255, 20, 147, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .service-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .service-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .service-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .service-status-badge.blocked {
+            background: rgba(220, 53, 69, 0.1);
+            color: #dc3545;
+        }
+
+        .service-status-badge.allowed {
+            background: rgba(40, 167, 69, 0.1);
+            color: #28a745;
+        }
+
+        .service-status-badge.partial {
+            background: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+        }
+
+        .service-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .service-action {
+            width: 100%;
+            margin-top: auto;
+        }
+
         .controls {
             display: flex;
             gap: 0.75rem;
@@ -618,6 +726,33 @@
                 left: 10px !important;
                 max-width: 100% !important;
             }
+
+            .service-block-section {
+                padding: 1rem !important;
+                margin-bottom: 1.5rem !important;
+            }
+
+            .service-block-header {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 1rem !important;
+                margin-bottom: 1rem !important;
+            }
+
+            .service-block-actions {
+                width: 100% !important;
+                flex-direction: column !important;
+                gap: 0.5rem !important;
+            }
+
+            .service-block-actions .btn {
+                width: 100% !important;
+            }
+
+            .services-grid {
+                grid-template-columns: 1fr !important;
+                gap: 0.75rem !important;
+            }
         }
 
         @media (max-width: 480px) {
@@ -752,6 +887,27 @@
 
             <!-- Category Sections -->
             <div id="categories"></div>
+
+            <!-- Service Block Control Section -->
+            <div class="service-block-section">
+                <div class="service-block-header">
+                    <div>
+                        <h2 class="service-block-title" data-i18n="service-block-title">Service Block Control</h2>
+                        <p class="service-block-description" data-i18n="service-block-description">Block or allow internet services across the entire network using AdGuard Home.</p>
+                    </div>
+                    <div class="service-block-actions">
+                        <button class="btn btn-block" onclick="blockAllServices()">
+                            <span class="material-icons" style="font-size: 18px;">block</span>
+                            <span data-i18n="block-all-services">Block All Services</span>
+                        </button>
+                        <button class="btn btn-unblock" onclick="unblockAllServices()">
+                            <span class="material-icons" style="font-size: 18px;">check_circle</span>
+                            <span data-i18n="unblock-all-services">Unblock All Services</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="services-list" class="services-grid"></div>
+            </div>
         </div>
     </div>
 
@@ -789,7 +945,29 @@
                 'unblocked-success': 'All clients unblocked on {routers}! Success: {success}, Failed: {failed}',
                 'category-blocked': '{category} blocked on {routers}! Success: {success}, Failed: {failed}',
                 'category-unblocked': '{category} unblocked on {routers}! Success: {success}, Failed: {failed}',
-                'error': 'Error: {error}'
+                'error': 'Error: {error}',
+                'service-block-title': 'Service Block Control',
+                'service-block-description': 'Block or allow internet services across the entire network using AdGuard Home.',
+                'block-all-services': 'Block All Services',
+                'unblock-all-services': 'Unblock All Services',
+                'block-service': 'Block',
+                'unblock-service': 'Unblock',
+                'blocked': 'Blocked',
+                'allowed': 'Allowed',
+                'blocked-network-wide': 'Blocked network-wide',
+                'allowed-network-wide': 'Allowed network-wide',
+                'confirm-block-all-services': 'Are you sure you want to block ALL services on {router}?',
+                'confirm-unblock-all-services': 'Are you sure you want to unblock ALL services on {router}?',
+                'confirm-block-service': 'Are you sure you want to block "{service}" on {router}?',
+                'confirm-unblock-service': 'Are you sure you want to unblock "{service}" on {router}?',
+                'blocking-services': 'Blocking services on {router}...',
+                'unblocking-services': 'Unblocking services on {router}...',
+                'blocking-service': 'Blocking {service} on {router}...',
+                'unblocking-service': 'Unblocking {service} on {router}...',
+                'services-blocked-success': 'Services blocked on {routers}!',
+                'services-unblocked-success': 'Services unblocked on {routers}!',
+                'service-blocked-success': '{service} blocked on {routers}!',
+                'service-unblocked-success': '{service} unblocked on {routers}!'
             },
             ja: {
                 'title': 'クライアントブロック制御',
@@ -822,7 +1000,29 @@
                 'unblocked-success': '{routers}ですべてのクライアントのブロックを解除しました！成功: {success}、失敗: {failed}',
                 'category-blocked': '{routers}で{category}をブロックしました！成功: {success}、失敗: {failed}',
                 'category-unblocked': '{routers}で{category}のブロックを解除しました！成功: {success}、失敗: {failed}',
-                'error': 'エラー: {error}'
+                'error': 'エラー: {error}',
+                'service-block-title': 'サービスブロック制御',
+                'service-block-description': 'AdGuard Homeを使用して、ネットワーク全体でインターネットサービスをブロックまたは許可します。',
+                'block-all-services': 'すべてのサービスをブロック',
+                'unblock-all-services': 'すべてのサービスのブロックを解除',
+                'block-service': 'ブロック',
+                'unblock-service': 'ブロック解除',
+                'blocked': 'ブロック済み',
+                'allowed': '許可済み',
+                'blocked-network-wide': 'ネットワーク全体でブロック',
+                'allowed-network-wide': 'ネットワーク全体で許可',
+                'confirm-block-all-services': '{router}でALLサービスをブロックしてもよろしいですか？',
+                'confirm-unblock-all-services': '{router}でALLサービスのブロックを解除してもよろしいですか？',
+                'confirm-block-service': '{router}で「{service}」をブロックしてもよろしいですか？',
+                'confirm-unblock-service': '{router}で「{service}」のブロックを解除してもよろしいですか？',
+                'blocking-services': '{router}でサービスをブロック中...',
+                'unblocking-services': '{router}でサービスのブロックを解除中...',
+                'blocking-service': '{router}で{service}をブロック中...',
+                'unblocking-service': '{router}で{service}のブロックを解除中...',
+                'services-blocked-success': '{routers}でサービスをブロックしました！',
+                'services-unblocked-success': '{routers}でサービスのブロックを解除しました！',
+                'service-blocked-success': '{routers}で{service}をブロックしました！',
+                'service-unblocked-success': '{routers}で{service}のブロックを解除しました！'
             }
         };
 
@@ -832,6 +1032,8 @@
         let selectedRouter = 'all';
         let currentLanguage = 'en';
         let currentTheme = 'dark';
+        let services = [];
+        let blockedServices = [];
 
         // Initialize theme and language
         function init() {
@@ -912,6 +1114,19 @@
                 const clientsData = await clientsRes.json();
                 allClients = clientsData.clients || [];
 
+                // Load services
+                const servicesRes = await fetch('/api/services');
+                const servicesData = await servicesRes.json();
+                services = servicesData.services || [];
+                
+                if (services.length === 0) {
+                    console.warn('No services loaded. Check if services.yml is properly mounted.');
+                    showAlert('Warning: No services found. Please check services.yml file.', 'error');
+                }
+
+                // Load service status
+                await loadServiceStatus();
+
                 renderUI();
             } catch (error) {
                 showAlert(t('error', { error: error.message }), 'error');
@@ -933,9 +1148,108 @@
             });
         }
 
-        function updateRouterSelection() {
+        async function updateRouterSelection() {
             const select = document.getElementById('router-select');
             selectedRouter = select.value;
+            console.log(`Router selection changed to: ${selectedRouter}`);
+            // Reload service status when router changes
+            await loadServiceStatus();
+            renderServices();
+        }
+
+        async function loadServiceStatus() {
+            try {
+                const res = await fetch(`/api/services/status?router=${encodeURIComponent(selectedRouter)}`);
+                
+                if (!res.ok) {
+                    console.error(`Failed to load service status: ${res.status} ${res.statusText}`);
+                    blockedServices = [];
+                    return;
+                }
+                
+                const data = await res.json();
+                
+                if (data.blocked_services !== undefined) {
+                    // Single router response (simplified format)
+                    blockedServices = data.blocked_services || [];
+                    console.log(`Loaded ${blockedServices.length} blocked services for single router`);
+                } else if (data.results && Array.isArray(data.results)) {
+                    // Multiple routers response
+                    if (selectedRouter === 'all') {
+                        // For "all routers", show services blocked on ALL routers
+                        const allBlocked = new Set();
+                        const routerBlockedSets = data.results
+                            .filter(r => r.success)
+                            .map(r => new Set(r.blocked_services || []));
+                        
+                        if (routerBlockedSets.length > 0) {
+                            // Start with first router's blocked services
+                            routerBlockedSets[0].forEach(svc => allBlocked.add(svc));
+                            // Keep only services blocked on ALL routers
+                            routerBlockedSets.slice(1).forEach(blockedSet => {
+                                allBlocked.forEach(svc => {
+                                    if (!blockedSet.has(svc)) {
+                                        allBlocked.delete(svc);
+                                    }
+                                });
+                            });
+                        }
+                        blockedServices = Array.from(allBlocked);
+                        console.log(`Loaded ${blockedServices.length} blocked services (common to all routers)`);
+                    } else {
+                        // Single router selected but got results array (shouldn't happen, but handle it)
+                        const routerResult = data.results.find(r => 
+                            r.router === selectedRouter || 
+                            r.router_name === selectedRouter ||
+                            r.success
+                        );
+                        blockedServices = routerResult ? (routerResult.blocked_services || []) : [];
+                        console.log(`Loaded ${blockedServices.length} blocked services for router ${selectedRouter}`);
+                    }
+                } else {
+                    console.warn('Unexpected response format from /api/services/status:', data);
+                    blockedServices = [];
+                }
+            } catch (error) {
+                console.error('Error loading service status:', error);
+                showAlert(`Error loading service status: ${error.message}`, 'error');
+                blockedServices = [];
+            }
+        }
+
+        function renderServices() {
+            const servicesList = document.getElementById('services-list');
+            servicesList.innerHTML = '';
+            
+            if (services.length === 0) {
+                servicesList.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No services available. Please check services.yml file.</div>';
+                return;
+            }
+            
+            services.forEach(service => {
+                const isBlocked = blockedServices.includes(service.id);
+                const card = document.createElement('div');
+                card.className = 'service-card';
+                
+                card.innerHTML = `
+                    <div class="service-card-header">
+                        <div class="service-name">${escapeHtml(service.name)}</div>
+                        <span class="service-status-badge ${isBlocked ? 'blocked' : 'allowed'}">
+                            ${isBlocked ? '🟥' : '🟩'} ${isBlocked ? t('blocked') : t('allowed')}
+                        </span>
+                    </div>
+                    <div class="service-subtitle">
+                        ${isBlocked ? t('blocked-network-wide') : t('allowed-network-wide')}
+                    </div>
+                    <button class="btn ${isBlocked ? 'btn-unblock' : 'btn-block'} service-action" 
+                            onclick="${isBlocked ? 'unblockService' : 'blockService'}('${escapeHtml(service.id)}', '${escapeHtml(service.name)}')">
+                        <span class="material-icons" style="font-size: 18px;">${isBlocked ? 'check_circle' : 'block'}</span>
+                        <span>${isBlocked ? t('unblock-service') : t('block-service')}</span>
+                    </button>
+                `;
+                
+                servicesList.appendChild(card);
+            });
         }
 
         function renderUI() {
@@ -988,6 +1302,9 @@
                 `;
                 categoriesDiv.appendChild(section);
             });
+
+            // Render services
+            renderServices();
         }
 
         async function blockAll() {
@@ -1279,6 +1596,170 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        async function blockService(serviceId, serviceName) {
+            const routerName = getRouterName(selectedRouter);
+            if (!confirm(t('confirm-block-service', { service: serviceName, router: routerName }))) return;
+            
+            try {
+                showAlert(t('blocking-service', { service: serviceName, router: routerName }), 'info');
+                const res = await fetch('/api/services/block', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ services: [serviceId], router: selectedRouter })
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    const failedRouters = data.results.filter(r => !r.success);
+                    if (failedRouters.length > 0) {
+                        failedRouters.forEach(router => {
+                            showAlert(`${router.router_name || router.router}: ${router.error || 'Connection failed'}`, 'error');
+                        });
+                    }
+                    
+                    const successfulRouters = data.results.filter(r => r.success);
+                    if (successfulRouters.length > 0) {
+                        const routerNames = successfulRouters.map(r => r.router_name || r.router);
+                        const routerList = routerNames.join(', ');
+                        showAlert(t('service-blocked-success', { service: serviceName, routers: routerList }), 'success');
+                        await loadServiceStatus();
+                        renderServices();
+                    }
+                } else {
+                    showAlert(t('error', { error: data.error || 'Unknown error' }), 'error');
+                }
+            } catch (error) {
+                showAlert(t('error', { error: error.message }), 'error');
+            }
+        }
+
+        async function unblockService(serviceId, serviceName) {
+            const routerName = getRouterName(selectedRouter);
+            if (!confirm(t('confirm-unblock-service', { service: serviceName, router: routerName }))) return;
+            
+            try {
+                showAlert(t('unblocking-service', { service: serviceName, router: routerName }), 'info');
+                const res = await fetch('/api/services/unblock', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ services: [serviceId], router: selectedRouter })
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    const failedRouters = data.results.filter(r => !r.success);
+                    if (failedRouters.length > 0) {
+                        failedRouters.forEach(router => {
+                            showAlert(`${router.router_name || router.router}: ${router.error || 'Connection failed'}`, 'error');
+                        });
+                    }
+                    
+                    const successfulRouters = data.results.filter(r => r.success);
+                    if (successfulRouters.length > 0) {
+                        const routerNames = successfulRouters.map(r => r.router_name || r.router);
+                        const routerList = routerNames.join(', ');
+                        showAlert(t('service-unblocked-success', { service: serviceName, routers: routerList }), 'success');
+                        await loadServiceStatus();
+                        renderServices();
+                    }
+                } else {
+                    showAlert(t('error', { error: data.error || 'Unknown error' }), 'error');
+                }
+            } catch (error) {
+                showAlert(t('error', { error: error.message }), 'error');
+            }
+        }
+
+        async function blockAllServices() {
+            if (services.length === 0) {
+                showAlert('No services available to block.', 'error');
+                return;
+            }
+            
+            const routerName = getRouterName(selectedRouter);
+            if (!confirm(t('confirm-block-all-services', { router: routerName }))) return;
+            
+            try {
+                showAlert(t('blocking-services', { router: routerName }), 'info');
+                const serviceIds = services.map(s => s.id);
+                const res = await fetch('/api/services/block', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ services: serviceIds, router: selectedRouter })
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    const failedRouters = data.results.filter(r => !r.success);
+                    if (failedRouters.length > 0) {
+                        failedRouters.forEach(router => {
+                            showAlert(`${router.router_name || router.router}: ${router.error || 'Connection failed'}`, 'error');
+                        });
+                    }
+                    
+                    const successfulRouters = data.results.filter(r => r.success);
+                    if (successfulRouters.length > 0) {
+                        const routerNames = successfulRouters.map(r => r.router_name || r.router);
+                        const routerList = routerNames.join(', ');
+                        showAlert(t('services-blocked-success', { routers: routerList }), 'success');
+                        await loadServiceStatus();
+                        renderServices();
+                    }
+                } else {
+                    showAlert(t('error', { error: data.error || 'Unknown error' }), 'error');
+                }
+            } catch (error) {
+                showAlert(t('error', { error: error.message }), 'error');
+            }
+        }
+
+        async function unblockAllServices() {
+            if (services.length === 0) {
+                showAlert('No services available to unblock.', 'error');
+                return;
+            }
+            
+            const routerName = getRouterName(selectedRouter);
+            if (!confirm(t('confirm-unblock-all-services', { router: routerName }))) return;
+            
+            try {
+                showAlert(t('unblocking-services', { router: routerName }), 'info');
+                const serviceIds = services.map(s => s.id);
+                const res = await fetch('/api/services/unblock', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ services: serviceIds, router: selectedRouter })
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    const failedRouters = data.results.filter(r => !r.success);
+                    if (failedRouters.length > 0) {
+                        failedRouters.forEach(router => {
+                            showAlert(`${router.router_name || router.router}: ${router.error || 'Connection failed'}`, 'error');
+                        });
+                    }
+                    
+                    const successfulRouters = data.results.filter(r => r.success);
+                    if (successfulRouters.length > 0) {
+                        const routerNames = successfulRouters.map(r => r.router_name || r.router);
+                        const routerList = routerNames.join(', ');
+                        showAlert(t('services-unblocked-success', { routers: routerList }), 'success');
+                        await loadServiceStatus();
+                        renderServices();
+                    }
+                } else {
+                    showAlert(t('error', { error: data.error || 'Unknown error' }), 'error');
+                }
+            } catch (error) {
+                showAlert(t('error', { error: error.message }), 'error');
+            }
         }
 
         // Initialize on page load

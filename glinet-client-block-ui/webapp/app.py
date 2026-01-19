@@ -9,6 +9,7 @@ import os
 import sys
 import csv
 import logging
+import yaml
 from datetime import timedelta
 from functools import wraps
 from typing import List, Dict, Tuple, Optional
@@ -20,6 +21,7 @@ import requests
 # Import glinet_block from same directory
 from glinet_block import (
     GLiNetRouter,
+    AdGuardHomeClient,
     parse_routers_file,
     parse_client_list,
     normalize_mac
@@ -41,12 +43,18 @@ app.secret_key = os.environ.get('SECRET_KEY', 'change-this-secret-key-in-product
 # Session configuration - 4 hours
 app.permanent_session_lifetime = timedelta(hours=4)
 
-# Configuration - use data directory for mounted volumes
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, 'data')
-MAPPING_FILE = os.path.join(DATA_DIR, 'mapping.csv')
-ROUTERS_FILE = os.path.join(DATA_DIR, 'routers.csv')
-CLIENTS_DIR = os.path.join(DATA_DIR, 'clients')
+# Configuration - use config directory for mounted volumes
+# Default to /config (when mounted) or fallback to local data directory for development
+CONFIG_DIR = os.environ.get('CONFIG_DIR', '/config')
+if not os.path.exists(CONFIG_DIR):
+    # Fallback to local data directory for development
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    CONFIG_DIR = os.path.join(BASE_DIR, 'data')
+
+MAPPING_FILE = os.path.join(CONFIG_DIR, 'mapping.csv')
+ROUTERS_FILE = os.path.join(CONFIG_DIR, 'routers.csv')
+CLIENTS_DIR = os.path.join(CONFIG_DIR, 'clients')
+SERVICES_FILE = os.path.join(CONFIG_DIR, 'services.yml')
 
 # Default password (should be changed via environment variables)
 DEFAULT_PASSWORD = os.environ.get('WEBUI_PASSWORD', 'admin')
@@ -689,9 +697,419 @@ def unblock_clients():
         return jsonify({'error': str(e)}), 500
 
 
+def _load_services() -> List[str]:
+    """Load available services from services.yml file."""
+    services = []
+    if not os.path.exists(SERVICES_FILE):
+        logger.warning(f"Services file not found: {SERVICES_FILE}")
+        return services
+    
+    try:
+        with open(SERVICES_FILE, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f)
+            if data and 'services' in data:
+                services = data['services']
+                if isinstance(services, list):
+                    logger.info(f"Loaded {len(services)} services from {SERVICES_FILE}")
+                    return services
+                else:
+                    logger.error(f"Services in {SERVICES_FILE} is not a list: {type(services)}")
+            else:
+                logger.error(f"No 'services' key found in {SERVICES_FILE}")
+    except yaml.YAMLError as e:
+        logger.error(f"YAML parsing error in {SERVICES_FILE}: {e}")
+    except Exception as e:
+        logger.error(f"Error loading services.yml: {e}", exc_info=True)
+    return services
+
+
+def _get_service_display_name(service_id: str) -> str:
+    """Convert service ID to human-readable name."""
+    # Convert snake_case to Title Case
+    return service_id.replace('_', ' ').title()
+
+
+@app.route('/api/services')
+@login_required
+def get_services():
+    """Get list of available services."""
+    try:
+        services = _load_services()
+        if not services:
+            logger.warning(f"No services loaded. File exists: {os.path.exists(SERVICES_FILE)}, Path: {SERVICES_FILE}")
+        services_list = [{'id': svc, 'name': _get_service_display_name(svc)} for svc in services]
+        return jsonify({'services': services_list})
+    except Exception as e:
+        logger.error(f"Error getting services: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/services/status')
+@login_required
+def get_services_status():
+    """Get current blocked services status for selected router(s)."""
+    router_selection = request.args.get('router', 'all')
+    
+    try:
+        all_routers = get_routers_from_env()
+        if not all_routers:
+            logger.error("No routers configured")
+            return jsonify({'error': 'No routers configured'}), 400
+        
+        # Filter routers based on selection
+        if router_selection == 'all':
+            routers = all_routers
+        else:
+            routers = [r for r in all_routers if r[0] == router_selection or r[2] == router_selection]
+            if not routers:
+                return jsonify({'error': f'Router "{router_selection}" not found'}), 400
+        
+        results = []
+        for router_host, password, router_name in routers:
+            logger.info(f"Getting service status from AdGuard Home on {router_name} ({router_host})")
+            try:
+                adguard = AdGuardHomeClient(
+                    host=router_host,
+                    password=password,
+                    verify_ssl=False,
+                    verbose=False
+                )
+                
+                try:
+                    if not adguard.login():
+                        results.append({
+                            'router': router_host,
+                            'router_name': router_name,
+                            'success': False,
+                            'error': 'Authentication failed'
+                        })
+                        continue
+                    
+                    blocked_services = adguard.get_blocked_services()
+                    if blocked_services is None:
+                        results.append({
+                            'router': router_host,
+                            'router_name': router_name,
+                            'success': False,
+                            'error': 'Failed to get blocked services'
+                        })
+                    else:
+                        results.append({
+                            'router': router_host,
+                            'router_name': router_name,
+                            'success': True,
+                            'blocked_services': blocked_services.get('ids', []),
+                            'schedule': blocked_services.get('schedule', {})
+                        })
+                finally:
+                    adguard.logout()
+                    
+            except requests.exceptions.Timeout:
+                logger.error(f"Timeout connecting to AdGuard Home on {router_name} ({router_host})")
+                results.append({
+                    'router': router_host,
+                    'router_name': router_name,
+                    'success': False,
+                    'error': 'Request timed out'
+                })
+            except requests.exceptions.ConnectionError:
+                logger.error(f"Connection error to AdGuard Home on {router_name} ({router_host})")
+                results.append({
+                    'router': router_host,
+                    'router_name': router_name,
+                    'success': False,
+                    'error': 'Router unreachable'
+                })
+            except Exception as e:
+                logger.error(f"Error getting service status from {router_name} ({router_host}): {e}", exc_info=True)
+                results.append({
+                    'router': router_host,
+                    'router_name': router_name,
+                    'success': False,
+                    'error': str(e)
+                })
+        
+        # If single router, return simplified response
+        if len(routers) == 1:
+            router_result = results[0] if results else None
+            if router_result and router_result.get('success'):
+                return jsonify({
+                    'blocked_services': router_result.get('blocked_services', []),
+                    'schedule': router_result.get('schedule', {}),
+                    'router': router_result.get('router'),
+                    'router_name': router_result.get('router_name')
+                })
+            else:
+                # Single router but failed
+                return jsonify({
+                    'error': router_result.get('error', 'Failed to get service status') if router_result else 'No router result',
+                    'blocked_services': [],
+                    'schedule': {}
+                }), 400
+        
+        # Multiple routers - return results array
+        return jsonify({'results': results})
+        
+    except Exception as e:
+        logger.error(f"Error getting services status: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/services/block', methods=['POST'])
+@login_required
+def block_service():
+    """Block a service (or multiple services)."""
+    data = request.get_json()
+    service_ids = data.get('services', [])
+    if not service_ids:
+        # Support single service for backward compatibility
+        service_id = data.get('service')
+        if service_id:
+            service_ids = [service_id]
+    
+    if not service_ids:
+        return jsonify({'error': 'No services specified'}), 400
+    
+    router_selection = data.get('router', 'all')
+    
+    try:
+        all_routers = get_routers_from_env()
+        if not all_routers:
+            logger.error("No routers configured")
+            return jsonify({'error': 'No routers configured'}), 400
+        
+        # Filter routers based on selection
+        if router_selection == 'all':
+            routers = all_routers
+        else:
+            routers = [r for r in all_routers if r[0] == router_selection or r[2] == router_selection]
+            if not routers:
+                return jsonify({'error': f'Router "{router_selection}" not found'}), 400
+        
+        logger.info(f"Blocking {len(service_ids)} service(s) on {len(routers)} router(s)")
+        
+        results = []
+        for router_host, password, router_name in routers:
+            logger.info(f"Connecting to AdGuard Home on {router_name} ({router_host})")
+            try:
+                adguard = AdGuardHomeClient(
+                    host=router_host,
+                    password=password,
+                    verify_ssl=False,
+                    verbose=False
+                )
+                
+                try:
+                    if not adguard.login():
+                        results.append({
+                            'router': router_host,
+                            'router_name': router_name,
+                            'success': False,
+                            'error': 'Authentication failed'
+                        })
+                        continue
+                    
+                    # Get current blocked services
+                    current = adguard.get_blocked_services()
+                    if current is None:
+                        results.append({
+                            'router': router_host,
+                            'router_name': router_name,
+                            'success': False,
+                            'error': 'Failed to get current blocked services'
+                        })
+                        continue
+                    
+                    # Add new services to existing list
+                    current_ids = set(current.get('ids', []))
+                    new_ids = list(current_ids | set(service_ids))
+                    schedule = current.get('schedule')
+                    
+                    if adguard.update_blocked_services(new_ids, schedule):
+                        results.append({
+                            'router': router_host,
+                            'router_name': router_name,
+                            'success': True,
+                            'blocked_services': new_ids
+                        })
+                        logger.info(f"Successfully blocked services on {router_name}")
+                    else:
+                        results.append({
+                            'router': router_host,
+                            'router_name': router_name,
+                            'success': False,
+                            'error': 'Failed to update blocked services'
+                        })
+                finally:
+                    adguard.logout()
+                    
+            except requests.exceptions.Timeout:
+                logger.error(f"Timeout connecting to AdGuard Home on {router_name} ({router_host})")
+                results.append({
+                    'router': router_host,
+                    'router_name': router_name,
+                    'success': False,
+                    'error': 'Request timed out'
+                })
+            except requests.exceptions.ConnectionError:
+                logger.error(f"Connection error to AdGuard Home on {router_name} ({router_host})")
+                results.append({
+                    'router': router_host,
+                    'router_name': router_name,
+                    'success': False,
+                    'error': 'Router unreachable'
+                })
+            except Exception as e:
+                logger.error(f"Error blocking services on {router_name} ({router_host}): {e}", exc_info=True)
+                results.append({
+                    'router': router_host,
+                    'router_name': router_name,
+                    'success': False,
+                    'error': str(e)
+                })
+        
+        router_names = [r.get('router_name', r.get('router', 'Unknown')) for r in results if r.get('success')]
+        logger.info(f"Block service operation complete on {', '.join(router_names) if router_names else 'no routers'}")
+        
+        return jsonify({
+            'results': results,
+            'router_names': router_names
+        })
+        
+    except Exception as e:
+        logger.error(f"Error blocking services: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/services/unblock', methods=['POST'])
+@login_required
+def unblock_service():
+    """Unblock a service (or multiple services)."""
+    data = request.get_json()
+    service_ids = data.get('services', [])
+    if not service_ids:
+        # Support single service for backward compatibility
+        service_id = data.get('service')
+        if service_id:
+            service_ids = [service_id]
+    
+    if not service_ids:
+        return jsonify({'error': 'No services specified'}), 400
+    
+    router_selection = data.get('router', 'all')
+    
+    try:
+        all_routers = get_routers_from_env()
+        if not all_routers:
+            logger.error("No routers configured")
+            return jsonify({'error': 'No routers configured'}), 400
+        
+        # Filter routers based on selection
+        if router_selection == 'all':
+            routers = all_routers
+        else:
+            routers = [r for r in all_routers if r[0] == router_selection or r[2] == router_selection]
+            if not routers:
+                return jsonify({'error': f'Router "{router_selection}" not found'}), 400
+        
+        logger.info(f"Unblocking {len(service_ids)} service(s) on {len(routers)} router(s)")
+        
+        results = []
+        for router_host, password, router_name in routers:
+            logger.info(f"Connecting to AdGuard Home on {router_name} ({router_host})")
+            try:
+                adguard = AdGuardHomeClient(
+                    host=router_host,
+                    password=password,
+                    verify_ssl=False,
+                    verbose=False
+                )
+                
+                try:
+                    if not adguard.login():
+                        results.append({
+                            'router': router_host,
+                            'router_name': router_name,
+                            'success': False,
+                            'error': 'Authentication failed'
+                        })
+                        continue
+                    
+                    # Get current blocked services
+                    current = adguard.get_blocked_services()
+                    if current is None:
+                        results.append({
+                            'router': router_host,
+                            'router_name': router_name,
+                            'success': False,
+                            'error': 'Failed to get current blocked services'
+                        })
+                        continue
+                    
+                    # Remove services from existing list
+                    current_ids = set(current.get('ids', []))
+                    new_ids = [sid for sid in current_ids if sid not in service_ids]
+                    schedule = current.get('schedule')
+                    
+                    if adguard.update_blocked_services(new_ids, schedule):
+                        results.append({
+                            'router': router_host,
+                            'router_name': router_name,
+                            'success': True,
+                            'blocked_services': new_ids
+                        })
+                        logger.info(f"Successfully unblocked services on {router_name}")
+                    else:
+                        results.append({
+                            'router': router_host,
+                            'router_name': router_name,
+                            'success': False,
+                            'error': 'Failed to update blocked services'
+                        })
+                finally:
+                    adguard.logout()
+                    
+            except requests.exceptions.Timeout:
+                logger.error(f"Timeout connecting to AdGuard Home on {router_name} ({router_host})")
+                results.append({
+                    'router': router_host,
+                    'router_name': router_name,
+                    'success': False,
+                    'error': 'Request timed out'
+                })
+            except requests.exceptions.ConnectionError:
+                logger.error(f"Connection error to AdGuard Home on {router_name} ({router_host})")
+                results.append({
+                    'router': router_host,
+                    'router_name': router_name,
+                    'success': False,
+                    'error': 'Router unreachable'
+                })
+            except Exception as e:
+                logger.error(f"Error unblocking services on {router_name} ({router_host}): {e}", exc_info=True)
+                results.append({
+                    'router': router_host,
+                    'router_name': router_name,
+                    'success': False,
+                    'error': str(e)
+                })
+        
+        router_names = [r.get('router_name', r.get('router', 'Unknown')) for r in results if r.get('success')]
+        logger.info(f"Unblock service operation complete on {', '.join(router_names) if router_names else 'no routers'}")
+        
+        return jsonify({
+            'results': results,
+            'router_names': router_names
+        })
+        
+    except Exception as e:
+        logger.error(f"Error unblocking services: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
-    # Create data directories if they don't exist
-    os.makedirs(DATA_DIR, exist_ok=True)
+    # Create config directories if they don't exist (for development)
+    os.makedirs(CONFIG_DIR, exist_ok=True)
     os.makedirs(CLIENTS_DIR, exist_ok=True)
     
     # Log startup info

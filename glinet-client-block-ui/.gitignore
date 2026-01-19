@@ -51,13 +51,17 @@ Thumbs.db
 config.ini
 
 # Router Configuration - Personal Information
-data/routers.csv
+config/routers.csv
 
 # Client Lists - Personal Information
-data/clients/*.csv
-!data/clients/*.example.csv
+config/clients/*.csv
+!config/clients/*.example.csv
 
 # Mapping - Personal Information
-data/mapping.csv
-!data/mapping.example.csv
+config/mapping.csv
+!config/mapping.example.csv
+
+# Services Configuration - Personal Information
+config/services.yml
+!config/services.example.yml
 

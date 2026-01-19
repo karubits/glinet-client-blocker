@@ -24,17 +24,18 @@ A clean, user-friendly web interface for managing client blocking/unblocking on 
    export ROUTER_PASS_2="password2"
    ```
 
-2. **Prepare data files**:
+2. **Prepare configuration files**:
    ```bash
    # Copy example files and customize them
-   cp data/mapping.example.csv data/mapping.csv
-   cp data/routers.example.csv data/routers.csv  # Optional if using env vars
-   cp data/clients/*.example.csv data/clients/
+   cp config/mapping.example.csv config/mapping.csv
+   cp config/routers.example.csv config/routers.csv  # Optional if using env vars
+   cp config/clients/*.example.csv config/clients/
    
    # Edit the files with your actual data:
    # - Update mapping.csv with your categories
    # - Update routers.csv with your router IPs/passwords (or use env vars)
    # - Update client list CSV files with your device MAC addresses
+   # - Update services.yml with your service blocking preferences
    ```
 
 3. **Build and run**:
@@ -67,7 +68,7 @@ ROUTER_PASS_3="password3"
 ```
 
 ### Method 3: routers.csv File (Fallback)
-If no environment variables are set, the web UI will look for `data/routers.csv`:
+If no environment variables are set, the web UI will look for `config/routers.csv`:
 ```
 HOST,PASS
 100.65.142.110,password1
@@ -78,20 +79,27 @@ HOST,PASS
 
 ```
 glinet-client-block-ui/
-├── app.py                 # Flask application
-├── glinet_block.py        # Shared blocking logic
-├── templates/            # HTML templates
-│   ├── login.html
-│   └── dashboard.html
-├── data/                 # Data directory (mounted as volume)
+├── webapp/               # Application code
+│   ├── app.py           # Flask application
+│   ├── glinet_block.py  # Shared blocking logic
+│   ├── templates/       # HTML templates
+│   │   ├── login.html
+│   │   └── dashboard.html
+│   └── static/          # Static assets
+├── config/              # User configuration files (mounted as volume)
 │   ├── mapping.csv      # Category to file mapping
+│   ├── services.yml     # Service blocking configuration
+│   ├── routers.csv      # Router configuration (optional)
 │   └── clients/         # Client list CSV files
 ├── Dockerfile
-├── docker-compose.yml
-└── requirements.txt
+├── compose.yml
+└── README.md
 ```
 
-**Note:** Client list files should be copied from the root `../clients/` directory to `data/clients/`.
+**Note:** 
+- Configuration files in `config/` are mounted into the container at `/config/`
+- Client list files should be placed in `config/clients/`
+- Example files (`.example.csv`, `.example.yml`) are provided as templates
 
 ## Environment Variables
 
@@ -130,13 +138,18 @@ docker-compose logs -f glinet-webui
 
 ### "No routers configured"
 - Check that router environment variables are set correctly
-- Verify `data/routers.csv` exists if using file-based config
+- Verify `config/routers.csv` exists if using file-based config
 - Check docker logs: `docker-compose logs glinet-webui`
 
 ### "No clients found"
-- Verify `data/mapping.csv` exists and is correctly formatted
-- Check that client list files are in `data/clients/`
+- Verify `config/mapping.csv` exists and is correctly formatted
+- Check that client list files are in `config/clients/`
 - Ensure client list files have the correct CSV format
+
+### "No services found"
+- Verify `config/services.yml` exists and is correctly formatted
+- Check docker logs for YAML parsing errors
+- Ensure the file is properly mounted in docker-compose
 
 ### Authentication fails
 - Verify `SECRET_KEY` is set

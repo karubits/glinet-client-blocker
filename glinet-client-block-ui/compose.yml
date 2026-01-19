@@ -5,10 +5,7 @@ services:
     ports:
      - "5000:5000"
     volumes:
-      - ./webapp/data/mapping.csv:/app/data/mapping.csv:ro
-      - ./webapp/data/clients:/app/data/clients:ro
-      # Optional: mount routers.csv if not using env vars
-      # - ./webapp/data/routers.csv:/app/data/routers.csv:ro
+      - ./config:/config:ro
     environment:
       - SECRET_KEY=${SECRET_KEY:-change-this-secret-key-in-production}
       - WEBUI_PASSWORD=${WEBUI_PASSWORD:-admin}

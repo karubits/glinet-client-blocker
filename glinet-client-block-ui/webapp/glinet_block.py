@@ -535,6 +535,316 @@ class GLiNetRouter:
                 print_debug(f"Error during logout: {e}", self.verbose)
 
 
+class AdGuardHomeClient:
+    """AdGuard Home API client for network-wide service blocking."""
+    
+    def __init__(self, host: str, password: str, verify_ssl: bool = False, verbose: bool = False, port: int = 3000):
+        """
+        Initialize AdGuard Home connection.
+        
+        Args:
+            host: Router IP address or hostname
+            password: Router password (used for AdGuard login)
+            verify_ssl: Whether to verify SSL certificates (default: False for self-signed)
+            verbose: Enable verbose output
+            port: AdGuard Home port (default: 3000)
+        """
+        self.host = host
+        self.password = password
+        self.verify_ssl = verify_ssl
+        self.verbose = verbose
+        self.port = port
+        
+        # Determine protocol (try HTTPS first, fallback to HTTP)
+        if not host.startswith(('http://', 'https://')):
+            # Try HTTPS first, but we'll handle both
+            self.base_url = f"http://{host}:{port}"
+        else:
+            self.base_url = host
+            parsed = urlparse(host)
+            self.host = parsed.netloc.split(':')[0] if parsed.netloc else host
+        
+        self.session = requests.Session()
+        
+        # Configure retry strategy
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self.session.mount("http://", adapter)
+        self.session.mount("https://", adapter)
+        
+        # Disable SSL verification if requested
+        if not verify_ssl:
+            self.session.verify = False
+        
+        self.authenticated = False
+    
+    def login(self) -> bool:
+        """
+        Authenticate with AdGuard Home using cookie-based session.
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        login_url = f"{self.base_url}/control/login"
+        
+        payload = {
+            "name": "admin",
+            "password": self.password
+        }
+        
+        try:
+            print_debug(f"Authenticating to AdGuard Home at {self.host}:{self.port}", self.verbose)
+            response = self.session.post(
+                login_url,
+                json=payload,
+                timeout=15,
+                verify=self.verify_ssl
+            )
+            
+            # Check if Admin-Token cookie was set
+            if 'Admin-Token' in self.session.cookies:
+                self.authenticated = True
+                print_success(f"Authenticated with AdGuard Home at {self.host}:{self.port}", self.verbose)
+                return True
+            else:
+                # Check response status
+                if response.status_code == 200:
+                    # Some implementations might return 200 but not set cookie immediately
+                    # Try to check response body
+                    try:
+                        data = response.json()
+                        if data.get('ok') or 'Admin-Token' in response.cookies:
+                            self.authenticated = True
+                            print_success(f"Authenticated with AdGuard Home at {self.host}:{self.port}", self.verbose)
+                            return True
+                    except:
+                        pass
+                
+                print_error(f"Authentication failed: No Admin-Token cookie received (status: {response.status_code})", self.verbose)
+                return False
+                
+        except requests.exceptions.Timeout:
+            print_error(f"Connection timeout during AdGuard Home login to {self.host}:{self.port}", self.verbose)
+            raise
+        except requests.exceptions.ConnectionError as e:
+            print_error(f"Connection error during AdGuard Home login to {self.host}:{self.port}: {e}", self.verbose)
+            raise
+        except Exception as e:
+            print_error(f"Unexpected error during AdGuard Home login: {e}", self.verbose)
+            return False
+    
+    def get_blocked_services(self) -> Optional[Dict]:
+        """
+        Get current blocked services configuration.
+        
+        According to spec, this uses GET /control/tls/status, though this seems unusual.
+        If that doesn't work, we'll try /control/blocked_services/list as fallback.
+        
+        Returns:
+            Dict with 'ids' (list of service IDs) and 'schedule' (dict with time_zone), or None on error
+        """
+        if not self.authenticated:
+            print_error("Not authenticated. Please login first.", self.verbose)
+            return None
+        
+        # Try the spec endpoint first
+        status_url = f"{self.base_url}/control/tls/status"
+        
+        try:
+            print_debug(f"Fetching blocked services from {self.host}:{self.port}", self.verbose)
+            response = self.session.get(
+                status_url,
+                timeout=10,
+                verify=self.verify_ssl
+            )
+            
+            if response.status_code == 200:
+                try:
+                    data = response.json()
+                    # Check if response has the expected structure
+                    if 'ids' in data or 'schedule' in data:
+                        # Normalize response - ensure we have ids and schedule
+                        result = {
+                            'ids': data.get('ids', []),
+                            'schedule': data.get('schedule', {'time_zone': 'Asia/Tokyo'})
+                        }
+                        print_debug(f"Retrieved {len(result['ids'])} blocked services", self.verbose)
+                        return result
+                except json.JSONDecodeError:
+                    print_debug(f"Response is not JSON, trying fallback endpoint", self.verbose)
+            
+            # Fallback to standard AdGuard Home endpoint
+            fallback_url = f"{self.base_url}/control/blocked_services/list"
+            print_debug(f"Trying fallback endpoint: {fallback_url}", self.verbose)
+            response = self.session.get(
+                fallback_url,
+                timeout=10,
+                verify=self.verify_ssl
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                # Standard AdGuard Home returns just a list of IDs
+                if isinstance(data, list):
+                    result = {
+                        'ids': data,
+                        'schedule': {'time_zone': 'Asia/Tokyo'}  # Default timezone
+                    }
+                elif isinstance(data, dict):
+                    result = {
+                        'ids': data.get('ids', []),
+                        'schedule': data.get('schedule', {'time_zone': 'Asia/Tokyo'})
+                    }
+                else:
+                    result = {
+                        'ids': [],
+                        'schedule': {'time_zone': 'Asia/Tokyo'}
+                    }
+                print_debug(f"Retrieved {len(result['ids'])} blocked services (fallback)", self.verbose)
+                return result
+            
+            print_error(f"Failed to get blocked services: HTTP {response.status_code}", self.verbose)
+            return None
+            
+        except requests.exceptions.RequestException as e:
+            print_error(f"Error fetching blocked services: {e}", self.verbose)
+            return None
+        except Exception as e:
+            print_error(f"Unexpected error fetching blocked services: {e}", self.verbose)
+            return None
+    
+    def update_blocked_services(self, service_ids: List[str], schedule: Optional[Dict] = None) -> bool:
+        """
+        Update blocked services list.
+        
+        This is a replace-all operation:
+        1. Fetch current state
+        2. Modify ids
+        3. PUT full payload back
+        
+        Args:
+            service_ids: List of service IDs to block
+            schedule: Optional schedule dict (if None, preserves existing schedule)
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self.authenticated:
+            print_error("Not authenticated. Please login first.", self.verbose)
+            return False
+        
+        # Step 1: Fetch current state
+        current = self.get_blocked_services()
+        if current is None:
+            # If we can't get current state, use defaults
+            current = {
+                'ids': [],
+                'schedule': schedule or {'time_zone': 'Asia/Tokyo'}
+            }
+            print_warning("Could not fetch current state, using defaults", self.verbose)
+        else:
+            # Preserve schedule if not provided
+            if schedule is None:
+                schedule = current.get('schedule', {'time_zone': 'Asia/Tokyo'})
+        
+        # Step 2: Prepare payload with new ids
+        payload = {
+            'ids': service_ids,
+            'schedule': schedule
+        }
+        
+        # Step 3: PUT full payload
+        update_url = f"{self.base_url}/control/blocked_services/update"
+        
+        try:
+            print_debug(f"Updating blocked services: {len(service_ids)} services", self.verbose)
+            response = self.session.put(
+                update_url,
+                json=payload,
+                timeout=10,
+                verify=self.verify_ssl
+            )
+            
+            if response.status_code == 200:
+                print_success(f"Successfully updated blocked services", self.verbose)
+                return True
+            else:
+                print_error(f"Failed to update blocked services: HTTP {response.status_code}", self.verbose)
+                try:
+                    error_data = response.json()
+                    print_debug(f"Error response: {error_data}", self.verbose)
+                except:
+                    print_debug(f"Error response: {response.text}", self.verbose)
+                return False
+                
+        except requests.exceptions.RequestException as e:
+            print_error(f"Error updating blocked services: {e}", self.verbose)
+            return False
+        except Exception as e:
+            print_error(f"Unexpected error updating blocked services: {e}", self.verbose)
+            return False
+    
+    def block_service(self, service_id: str) -> bool:
+        """
+        Block a single service (adds to existing blocked services).
+        
+        Args:
+            service_id: Service ID to block (e.g., 'youtube')
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        current = self.get_blocked_services()
+        if current is None:
+            return False
+        
+        current_ids = set(current.get('ids', []))
+        if service_id in current_ids:
+            print_info(f"Service '{service_id}' is already blocked", self.verbose)
+            return True
+        
+        # Add service to list
+        new_ids = list(current_ids) + [service_id]
+        schedule = current.get('schedule')
+        
+        return self.update_blocked_services(new_ids, schedule)
+    
+    def unblock_service(self, service_id: str) -> bool:
+        """
+        Unblock a single service (removes from existing blocked services).
+        
+        Args:
+            service_id: Service ID to unblock (e.g., 'youtube')
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        current = self.get_blocked_services()
+        if current is None:
+            return False
+        
+        current_ids = set(current.get('ids', []))
+        if service_id not in current_ids:
+            print_info(f"Service '{service_id}' is not blocked", self.verbose)
+            return True
+        
+        # Remove service from list
+        new_ids = [sid for sid in current_ids if sid != service_id]
+        schedule = current.get('schedule')
+        
+        return self.update_blocked_services(new_ids, schedule)
+    
+    def logout(self) -> None:
+        """Clean up session."""
+        self.session.close()
+        self.authenticated = False
+        print_debug("AdGuard Home session closed", self.verbose)
+
+
 def parse_routers_file(file_path: str) -> List[Tuple[str, str]]:
     """
     Parse routers file.
