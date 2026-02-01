@@ -140,13 +140,13 @@
             padding: 1.5rem;
             margin-bottom: 2rem;
             box-shadow: 0 2px 8px var(--shadow);
-            border-left: 4px solid var(--accent);
+            border: 1px solid var(--border-color);
             transition: background-color 0.3s ease;
         }
 
         .explanation h2 {
-            font-size: 1.25rem;
-            font-weight: 600;
+            font-size: 1.5rem;
+            font-weight: 700;
             color: var(--text-primary);
             margin-bottom: 0.75rem;
         }
@@ -164,11 +164,28 @@
             line-height: 1.8;
         }
 
-        .router-selector {
+        .client-block-control-box {
             background: var(--bg-secondary);
             border-radius: 12px;
             padding: 1.5rem;
             margin-bottom: 2rem;
+            box-shadow: 0 2px 8px var(--shadow);
+            border: 1px solid var(--border-color);
+            transition: background-color 0.3s ease, border-color 0.2s ease;
+        }
+
+        .client-block-control-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1.25rem;
+        }
+
+        .router-selector {
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
             box-shadow: 0 2px 8px var(--shadow);
             transition: background-color 0.3s ease;
         }
@@ -205,16 +222,18 @@
         }
 
         .category-card {
-            background: var(--bg-secondary);
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 0.75rem;
             box-shadow: 0 2px 8px var(--shadow);
-            transition: all 0.2s ease;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
 
         .category-card:hover {
-            box-shadow: 0 4px 16px var(--shadow-hover);
+            border-color: var(--accent);
+            box-shadow: 0 2px 8px rgba(255, 20, 147, 0.1);
         }
 
         .category-header {
@@ -225,7 +244,7 @@
         }
 
         .category-title {
-            font-size: 1.25rem;
+            font-size: 1rem;
             font-weight: 600;
             color: var(--text-primary);
         }
@@ -289,14 +308,86 @@
             font-size: 0.85rem;
         }
 
+        /* Expandable client list */
+        .expandable-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .expand-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            color: var(--text-secondary);
+            transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .expand-toggle:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .expand-toggle.expanded {
+            transform: rotate(180deg);
+        }
+
+        .expandable-body {
+            overflow: hidden;
+            transition: max-height 0.25s ease-out;
+        }
+
+        .expandable-body.collapsed {
+            max-height: 0;
+            margin-top: 0;
+            padding-top: 0;
+        }
+
+        .expandable-body.expanded {
+            max-height: 2000px;
+            margin-top: 1rem;
+            transition: max-height 0.35s ease-in;
+        }
+
+        .category-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+
+        .category-header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .category-card .category-actions {
+            margin-left: auto;
+        }
+
         .all-clients-section {
-            background: var(--bg-secondary);
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 0.75rem;
             box-shadow: 0 2px 8px var(--shadow);
-            border: 2px solid var(--accent);
-            transition: background-color 0.3s ease;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .all-clients-section:hover {
+            border-color: var(--accent);
+            box-shadow: 0 2px 8px rgba(255, 20, 147, 0.1);
         }
 
         .all-clients-header {
@@ -307,9 +398,13 @@
         }
 
         .all-clients-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--accent);
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        [data-theme="dark"] .all-clients-title {
+            color: #ffffff;
         }
 
         .loading {
@@ -467,15 +562,15 @@
             box-shadow: 0 4px 12px rgba(255, 20, 147, 0.3);
         }
 
-        /* Service Block Control Section */
+        /* Service Block Control Section (YouTube, Roblox) */
         .service-block-section {
             background: var(--bg-secondary);
             border-radius: 12px;
             padding: 1.5rem;
             margin-bottom: 2rem;
             box-shadow: 0 2px 8px var(--shadow);
-            border: 2px solid var(--accent);
-            transition: background-color 0.3s ease;
+            border: 1px solid var(--border-color);
+            transition: background-color 0.3s ease, border-color 0.2s ease;
         }
 
         .service-block-header {
@@ -489,7 +584,7 @@
         .service-block-title {
             font-size: 1.5rem;
             font-weight: 700;
-            color: var(--accent);
+            color: var(--text-primary);
             margin-bottom: 0.5rem;
         }
 
@@ -575,6 +670,114 @@
             margin-top: auto;
         }
 
+        /* YouTube / Roblox Block – per-router rows */
+        .youtube-block-section .service-block-title,
+        .roblox-block-section .service-block-title {
+            margin-bottom: 0.25rem;
+        }
+
+        .youtube-block-section .service-block-description,
+        .roblox-block-section .service-block-description {
+            margin-bottom: 1.25rem;
+        }
+
+        .youtube-router-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .youtube-router-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .youtube-router-row:hover {
+            border-color: var(--accent);
+            box-shadow: 0 2px 8px rgba(255, 20, 147, 0.1);
+        }
+
+        .youtube-router-row.error {
+            border-color: rgba(220, 53, 69, 0.5);
+            background: rgba(220, 53, 69, 0.05);
+        }
+
+        .youtube-router-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .youtube-router-name {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .youtube-status-light {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .youtube-status-light.blocked {
+            background: rgba(220, 53, 69, 0.15);
+            color: #dc3545;
+        }
+
+        .youtube-status-light.blocked::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #dc3545;
+            box-shadow: 0 0 6px rgba(220, 53, 69, 0.5);
+        }
+
+        .youtube-status-light.enabled {
+            background: rgba(40, 167, 69, 0.15);
+            color: #28a745;
+        }
+
+        .youtube-status-light.enabled::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #28a745;
+            box-shadow: 0 0 6px rgba(40, 167, 69, 0.5);
+        }
+
+        .youtube-status-light.unknown {
+            background: rgba(108, 117, 125, 0.15);
+            color: var(--text-secondary);
+        }
+
+        .youtube-status-light.unknown::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+        }
+
+        .youtube-router-action {
+            flex-shrink: 0;
+        }
+
         .controls {
             display: flex;
             gap: 0.75rem;
@@ -657,8 +860,14 @@
                 margin-bottom: 1rem !important;
             }
 
+            .category-header-row {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                width: 100% !important;
+            }
+
             .category-title {
-                font-size: 1.1rem !important;
+                font-size: 1rem !important;
             }
 
             .category-actions {
@@ -671,6 +880,15 @@
                 width: 100% !important;
                 justify-content: center !important;
                 padding: 0.75rem 1rem !important;
+            }
+
+            .client-block-control-box {
+                padding: 1rem !important;
+                margin-bottom: 1.5rem !important;
+            }
+
+            .client-block-control-title {
+                font-size: 1.5rem !important;
             }
 
             .all-clients-section {
@@ -686,7 +904,7 @@
             }
 
             .all-clients-title {
-                font-size: 1.25rem !important;
+                font-size: 1rem !important;
             }
 
             .all-clients-header .category-actions {
@@ -752,6 +970,16 @@
             .services-grid {
                 grid-template-columns: 1fr !important;
                 gap: 0.75rem !important;
+            }
+
+            .youtube-router-row {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 0.75rem !important;
+            }
+
+            .youtube-router-action .btn {
+                width: 100% !important;
             }
         }
 
@@ -820,7 +1048,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1 data-i18n="title">Client Block Control</h1>
+            <h1 data-i18n="title">Router Block Control</h1>
             <div class="header-actions">
                 <div class="controls">
                     <button class="btn btn-icon" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
@@ -859,54 +1087,60 @@
                 </ul>
             </div>
 
-            <!-- Router Selector -->
-            <div class="router-selector">
-                <label for="router-select" data-i18n="router-select-label">Select Router:</label>
-                <select id="router-select" onchange="updateRouterSelection()">
-                    <option value="all" data-i18n="all-routers">All Routers</option>
-                </select>
-            </div>
+            <!-- Client Block Control box -->
+            <div class="client-block-control-box">
+                <h2 class="client-block-control-title" data-i18n="client-block-control-title">Client Block Control</h2>
+                <!-- Router Selector -->
+                <div class="router-selector">
+                    <label for="router-select" data-i18n="router-select-label">Select Router:</label>
+                    <select id="router-select" onchange="updateRouterSelection()">
+                        <option value="all" data-i18n="all-routers">All Routers</option>
+                    </select>
+                </div>
 
-            <!-- All Clients Section -->
-            <div class="all-clients-section">
+                <!-- All Clients Section -->
+                <div class="all-clients-section">
                 <div class="all-clients-header">
-                    <div class="all-clients-title" data-i18n="all-clients">All Clients</div>
-                    <div class="category-actions">
-                        <button class="btn btn-block" onclick="blockAll()">
-                            <span class="material-icons" style="font-size: 18px;">block</span>
-                            <span data-i18n="block-all">Block All</span>
-                        </button>
-                        <button class="btn btn-unblock" onclick="unblockAll()">
-                            <span class="material-icons" style="font-size: 18px;">check_circle</span>
-                            <span data-i18n="unblock-all">Unblock All</span>
-                        </button>
+                    <div class="category-header-row" style="width: 100%;">
+                        <div class="category-header-left">
+                            <div class="expandable-header" onclick="toggleExpand('all-clients')" aria-expanded="false" id="all-clients-toggle">
+                                <span class="expand-toggle" id="all-clients-arrow" aria-hidden="true"><span class="material-icons">expand_more</span></span>
+                                <div class="all-clients-title" data-i18n="all-clients">All Clients</div>
+                            </div>
+                        </div>
+                        <div class="category-actions" onclick="event.stopPropagation();">
+                            <button class="btn btn-block" onclick="blockAll()">
+                                <span class="material-icons" style="font-size: 18px;">block</span>
+                                <span data-i18n="block-all">Block All</span>
+                            </button>
+                            <button class="btn btn-unblock" onclick="unblockAll()">
+                                <span class="material-icons" style="font-size: 18px;">check_circle</span>
+                                <span data-i18n="unblock-all">Unblock All</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <div id="all-clients-list" class="clients-list"></div>
+                <div id="all-clients-body" class="expandable-body collapsed">
+                    <div id="all-clients-list" class="clients-list"></div>
+                </div>
             </div>
 
-            <!-- Category Sections -->
-            <div id="categories"></div>
+                <!-- Category Sections -->
+                <div id="categories"></div>
+            </div>
 
-            <!-- Service Block Control Section -->
-            <div class="service-block-section">
-                <div class="service-block-header">
-                    <div>
-                        <h2 class="service-block-title" data-i18n="service-block-title">Service Block Control</h2>
-                        <p class="service-block-description" data-i18n="service-block-description">Block or allow internet services across the entire network using AdGuard Home.</p>
-                    </div>
-                    <div class="service-block-actions">
-                        <button class="btn btn-block" onclick="blockAllServices()">
-                            <span class="material-icons" style="font-size: 18px;">block</span>
-                            <span data-i18n="block-all-services">Block All Services</span>
-                        </button>
-                        <button class="btn btn-unblock" onclick="unblockAllServices()">
-                            <span class="material-icons" style="font-size: 18px;">check_circle</span>
-                            <span data-i18n="unblock-all-services">Unblock All Services</span>
-                        </button>
-                    </div>
-                </div>
-                <div id="services-list" class="services-grid"></div>
+            <!-- YouTube Block Section -->
+            <div class="service-block-section youtube-block-section">
+                <h2 class="service-block-title" data-i18n="youtube-block-title">YouTube Block</h2>
+                <p class="service-block-description" data-i18n="youtube-block-description">Block or allow YouTube per router using AdGuard Home.</p>
+                <div id="youtube-router-list" class="youtube-router-list"></div>
+            </div>
+
+            <!-- Roblox Block Section -->
+            <div class="service-block-section roblox-block-section">
+                <h2 class="service-block-title" data-i18n="roblox-block-title">Roblox Block</h2>
+                <p class="service-block-description" data-i18n="roblox-block-description">Block or allow Roblox per router using AdGuard Home.</p>
+                <div id="roblox-router-list" class="youtube-router-list"></div>
             </div>
         </div>
     </div>
@@ -915,7 +1149,7 @@
         // Translations
         const translations = {
             en: {
-                'title': 'Client Block Control',
+                'title': 'Router Block Control',
                 'logout': 'Logout',
                 'logout-text': 'Logout',
                 'loading': 'Loading client lists...',
@@ -948,6 +1182,17 @@
                 'error': 'Error: {error}',
                 'service-block-title': 'Service Block Control',
                 'service-block-description': 'Block or allow internet services across the entire network using AdGuard Home.',
+                'client-block-control-title': 'Client Block Control',
+                'youtube-block-title': 'YouTube Block',
+                'youtube-block-description': 'Block or allow YouTube per router using AdGuard Home.',
+                'roblox-block-title': 'Roblox Block',
+                'roblox-block-description': 'Block or allow Roblox per router using AdGuard Home.',
+                'status-blocked': 'Blocked',
+                'status-enabled': 'Enabled',
+                'block-youtube': 'Block',
+                'enable-youtube': 'Enable',
+                'block-roblox': 'Block',
+                'enable-roblox': 'Enable',
                 'block-all-services': 'Block All Services',
                 'unblock-all-services': 'Unblock All Services',
                 'block-service': 'Block',
@@ -970,7 +1215,7 @@
                 'service-unblocked-success': '{service} unblocked on {routers}!'
             },
             ja: {
-                'title': 'クライアントブロック制御',
+                'title': 'ルーターブロック制御',
                 'logout': 'ログアウト',
                 'logout-text': 'ログアウト',
                 'loading': 'クライアントリストを読み込み中...',
@@ -1001,8 +1246,19 @@
                 'category-blocked': '{routers}で{category}をブロックしました！成功: {success}、失敗: {failed}',
                 'category-unblocked': '{routers}で{category}のブロックを解除しました！成功: {success}、失敗: {failed}',
                 'error': 'エラー: {error}',
+                'client-block-control-title': 'クライアントブロック制御',
                 'service-block-title': 'サービスブロック制御',
                 'service-block-description': 'AdGuard Homeを使用して、ネットワーク全体でインターネットサービスをブロックまたは許可します。',
+                'youtube-block-title': 'YouTubeブロック',
+                'youtube-block-description': 'AdGuard HomeでルーターごとにYouTubeをブロックまたは許可します。',
+                'roblox-block-title': 'Robloxブロック',
+                'roblox-block-description': 'AdGuard HomeでルーターごとにRobloxをブロックまたは許可します。',
+                'status-blocked': 'ブロック済み',
+                'status-enabled': '許可中',
+                'block-youtube': 'ブロック',
+                'enable-youtube': '許可',
+                'block-roblox': 'ブロック',
+                'enable-roblox': '許可',
                 'block-all-services': 'すべてのサービスをブロック',
                 'unblock-all-services': 'すべてのサービスのブロックを解除',
                 'block-service': 'ブロック',
@@ -1026,14 +1282,19 @@
             }
         };
 
+        const YOUTUBE_SERVICE_ID = 'youtube';
+        const ROBLOX_SERVICE_ID = 'roblox';
+
         let allClients = [];
         let categories = [];
         let routers = [];
         let selectedRouter = 'all';
         let currentLanguage = 'en';
         let currentTheme = 'dark';
-        let services = [];
-        let blockedServices = [];
+        /** Per-router YouTube block status: { router, router_name, success, error?, youtubeBlocked } */
+        let youtubeStatusByRouter = [];
+        /** Per-router Roblox block status: { router, router_name, success, error?, robloxBlocked } */
+        let robloxStatusByRouter = [];
 
         // Initialize theme and language
         function init() {
@@ -1065,6 +1326,9 @@
             localStorage.setItem('language', lang);
             document.getElementById('language-select').value = lang;
             updateTranslations();
+            // Re-render dynamic sections so YouTube/Roblox button labels translate
+            if (document.getElementById('youtube-router-list')) renderYouTubeSection();
+            if (document.getElementById('roblox-router-list')) renderRobloxSection();
         }
 
         function changeLanguage() {
@@ -1114,18 +1378,9 @@
                 const clientsData = await clientsRes.json();
                 allClients = clientsData.clients || [];
 
-                // Load services
-                const servicesRes = await fetch('/api/services');
-                const servicesData = await servicesRes.json();
-                services = servicesData.services || [];
-                
-                if (services.length === 0) {
-                    console.warn('No services loaded. Check if services.yml is properly mounted.');
-                    showAlert('Warning: No services found. Please check services.yml file.', 'error');
-                }
-
-                // Load service status
-                await loadServiceStatus();
+                // Load per-router YouTube and Roblox (blocked services) status
+                await loadYouTubeStatus();
+                await loadRobloxStatus();
 
                 renderUI();
             } catch (error) {
@@ -1152,108 +1407,272 @@
             const select = document.getElementById('router-select');
             selectedRouter = select.value;
             console.log(`Router selection changed to: ${selectedRouter}`);
-            // Reload service status when router changes
-            await loadServiceStatus();
-            renderServices();
         }
 
-        async function loadServiceStatus() {
+        async function loadYouTubeStatus() {
             try {
-                const res = await fetch(`/api/services/status?router=${encodeURIComponent(selectedRouter)}`);
-                
+                const res = await fetch('/api/services/status?router=all');
                 if (!res.ok) {
-                    console.error(`Failed to load service status: ${res.status} ${res.statusText}`);
-                    blockedServices = [];
+                    console.error('Failed to load YouTube status:', res.status);
+                    youtubeStatusByRouter = [];
                     return;
                 }
-                
                 const data = await res.json();
-                
-                if (data.blocked_services !== undefined) {
-                    // Single router response (simplified format)
-                    blockedServices = data.blocked_services || [];
-                    console.log(`Loaded ${blockedServices.length} blocked services for single router`);
-                } else if (data.results && Array.isArray(data.results)) {
-                    // Multiple routers response
-                    if (selectedRouter === 'all') {
-                        // For "all routers", show services blocked on ALL routers
-                        const allBlocked = new Set();
-                        const routerBlockedSets = data.results
-                            .filter(r => r.success)
-                            .map(r => new Set(r.blocked_services || []));
-                        
-                        if (routerBlockedSets.length > 0) {
-                            // Start with first router's blocked services
-                            routerBlockedSets[0].forEach(svc => allBlocked.add(svc));
-                            // Keep only services blocked on ALL routers
-                            routerBlockedSets.slice(1).forEach(blockedSet => {
-                                allBlocked.forEach(svc => {
-                                    if (!blockedSet.has(svc)) {
-                                        allBlocked.delete(svc);
-                                    }
-                                });
-                            });
-                        }
-                        blockedServices = Array.from(allBlocked);
-                        console.log(`Loaded ${blockedServices.length} blocked services (common to all routers)`);
-                    } else {
-                        // Single router selected but got results array (shouldn't happen, but handle it)
-                        const routerResult = data.results.find(r => 
-                            r.router === selectedRouter || 
-                            r.router_name === selectedRouter ||
-                            r.success
-                        );
-                        blockedServices = routerResult ? (routerResult.blocked_services || []) : [];
-                        console.log(`Loaded ${blockedServices.length} blocked services for router ${selectedRouter}`);
-                    }
+                if (data.results && Array.isArray(data.results)) {
+                    youtubeStatusByRouter = data.results.map(r => ({
+                        router: r.router,
+                        router_name: r.router_name || r.router,
+                        success: !!r.success,
+                        error: r.error,
+                        youtubeBlocked: (r.blocked_services || []).includes(YOUTUBE_SERVICE_ID)
+                    }));
+                } else if (data.blocked_services !== undefined) {
+                    // Single router (API returns simplified format)
+                    youtubeStatusByRouter = [{
+                        router: data.router,
+                        router_name: data.router_name || data.router,
+                        success: true,
+                        error: null,
+                        youtubeBlocked: (data.blocked_services || []).includes(YOUTUBE_SERVICE_ID)
+                    }];
                 } else {
-                    console.warn('Unexpected response format from /api/services/status:', data);
-                    blockedServices = [];
+                    youtubeStatusByRouter = [];
                 }
             } catch (error) {
-                console.error('Error loading service status:', error);
-                showAlert(`Error loading service status: ${error.message}`, 'error');
-                blockedServices = [];
+                console.error('Error loading YouTube status:', error);
+                showAlert(t('error', { error: error.message }), 'error');
+                youtubeStatusByRouter = [];
             }
         }
 
-        function renderServices() {
-            const servicesList = document.getElementById('services-list');
-            servicesList.innerHTML = '';
-            
-            if (services.length === 0) {
-                servicesList.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No services available. Please check services.yml file.</div>';
+        async function loadRobloxStatus() {
+            try {
+                const res = await fetch('/api/services/status?router=all');
+                if (!res.ok) {
+                    robloxStatusByRouter = [];
+                    return;
+                }
+                const data = await res.json();
+                if (data.results && Array.isArray(data.results)) {
+                    robloxStatusByRouter = data.results.map(r => ({
+                        router: r.router,
+                        router_name: r.router_name || r.router,
+                        success: !!r.success,
+                        error: r.error,
+                        robloxBlocked: (r.blocked_services || []).includes(ROBLOX_SERVICE_ID)
+                    }));
+                } else if (data.blocked_services !== undefined) {
+                    robloxStatusByRouter = [{
+                        router: data.router,
+                        router_name: data.router_name || data.router,
+                        success: true,
+                        error: null,
+                        robloxBlocked: (data.blocked_services || []).includes(ROBLOX_SERVICE_ID)
+                    }];
+                } else {
+                    robloxStatusByRouter = [];
+                }
+            } catch (error) {
+                console.error('Error loading Roblox status:', error);
+                robloxStatusByRouter = [];
+            }
+        }
+
+        function renderYouTubeSection() {
+            const listEl = document.getElementById('youtube-router-list');
+            listEl.innerHTML = '';
+            if (routers.length === 0) {
+                listEl.innerHTML = '<div style="padding: 1rem; color: var(--text-secondary);">No routers configured.</div>';
                 return;
             }
-            
-            services.forEach(service => {
-                const isBlocked = blockedServices.includes(service.id);
-                const card = document.createElement('div');
-                card.className = 'service-card';
-                
-                card.innerHTML = `
-                    <div class="service-card-header">
-                        <div class="service-name">${escapeHtml(service.name)}</div>
-                        <span class="service-status-badge ${isBlocked ? 'blocked' : 'allowed'}">
-                            ${isBlocked ? '🟥' : '🟩'} ${isBlocked ? t('blocked') : t('allowed')}
-                        </span>
+            routers.forEach(router => {
+                const status = youtubeStatusByRouter.find(r =>
+                    r.router === router.host || r.router_name === (router.name || router.host)
+                );
+                const success = status ? status.success : false;
+                const youtubeBlocked = status ? status.youtubeBlocked : false;
+                const statusClass = !success ? 'unknown' : (youtubeBlocked ? 'blocked' : 'enabled');
+                const statusLabel = !success
+                    ? (status && status.error ? status.error : '—')
+                    : (youtubeBlocked ? t('status-blocked') : t('status-enabled'));
+                const row = document.createElement('div');
+                row.className = 'youtube-router-row' + (status && !status.success ? ' error' : '');
+                row.innerHTML = `
+                    <div class="youtube-router-info">
+                        <span class="youtube-router-name">${escapeHtml(router.name || router.host)}</span>
+                        <span class="youtube-status-light ${statusClass}">${escapeHtml(statusLabel)}</span>
                     </div>
-                    <div class="service-subtitle">
-                        ${isBlocked ? t('blocked-network-wide') : t('allowed-network-wide')}
+                    <div class="youtube-router-action">
+                        <button class="btn ${youtubeBlocked ? 'btn-unblock' : 'btn-block'}" onclick="${youtubeBlocked ? 'enableYouTube' : 'blockYouTube'}('${escapeHtml(router.host)}')">
+                            <span class="material-icons" style="font-size: 18px;">${youtubeBlocked ? 'check_circle' : 'block'}</span>
+                            <span>${youtubeBlocked ? t('enable-youtube') : t('block-youtube')}</span>
+                        </button>
                     </div>
-                    <button class="btn ${isBlocked ? 'btn-unblock' : 'btn-block'} service-action" 
-                            onclick="${isBlocked ? 'unblockService' : 'blockService'}('${escapeHtml(service.id)}', '${escapeHtml(service.name)}')">
-                        <span class="material-icons" style="font-size: 18px;">${isBlocked ? 'check_circle' : 'block'}</span>
-                        <span>${isBlocked ? t('unblock-service') : t('block-service')}</span>
-                    </button>
                 `;
-                
-                servicesList.appendChild(card);
+                listEl.appendChild(row);
             });
         }
 
+        function renderRobloxSection() {
+            const listEl = document.getElementById('roblox-router-list');
+            listEl.innerHTML = '';
+            if (routers.length === 0) {
+                listEl.innerHTML = '<div style="padding: 1rem; color: var(--text-secondary);">No routers configured.</div>';
+                return;
+            }
+            routers.forEach(router => {
+                const status = robloxStatusByRouter.find(r =>
+                    r.router === router.host || r.router_name === (router.name || router.host)
+                );
+                const success = status ? status.success : false;
+                const robloxBlocked = status ? status.robloxBlocked : false;
+                const statusClass = !success ? 'unknown' : (robloxBlocked ? 'blocked' : 'enabled');
+                const statusLabel = !success
+                    ? (status && status.error ? status.error : '—')
+                    : (robloxBlocked ? t('status-blocked') : t('status-enabled'));
+                const row = document.createElement('div');
+                row.className = 'youtube-router-row' + (status && !status.success ? ' error' : '');
+                row.innerHTML = `
+                    <div class="youtube-router-info">
+                        <span class="youtube-router-name">${escapeHtml(router.name || router.host)}</span>
+                        <span class="youtube-status-light ${statusClass}">${escapeHtml(statusLabel)}</span>
+                    </div>
+                    <div class="youtube-router-action">
+                        <button class="btn ${robloxBlocked ? 'btn-unblock' : 'btn-block'}" onclick="${robloxBlocked ? 'enableRoblox' : 'blockRoblox'}('${escapeHtml(router.host)}')">
+                            <span class="material-icons" style="font-size: 18px;">${robloxBlocked ? 'check_circle' : 'block'}</span>
+                            <span>${robloxBlocked ? t('enable-roblox') : t('block-roblox')}</span>
+                        </button>
+                    </div>
+                `;
+                listEl.appendChild(row);
+            });
+        }
+
+        async function blockYouTube(routerHost) {
+            try {
+                showAlert(t('blocking-service', { service: 'YouTube', router: getRouterName(routerHost) }), 'info');
+                const res = await fetch('/api/services/block', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ services: [YOUTUBE_SERVICE_ID], router: routerHost })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    const result = data.results && data.results.find(r => r.router === routerHost || r.router_name === routerHost);
+                    if (result && result.success) {
+                        showAlert(t('service-blocked-success', { service: 'YouTube', routers: result.router_name || routerHost }), 'success');
+                    } else if (result && !result.success) {
+                        showAlert(`${result.router_name || routerHost}: ${result.error || 'Failed'}`, 'error');
+                    }
+                    await loadYouTubeStatus();
+                    renderYouTubeSection();
+                } else {
+                    showAlert(t('error', { error: data.error || 'Unknown error' }), 'error');
+                }
+            } catch (error) {
+                showAlert(t('error', { error: error.message }), 'error');
+            }
+        }
+
+        async function enableYouTube(routerHost) {
+            try {
+                showAlert(t('unblocking-service', { service: 'YouTube', router: getRouterName(routerHost) }), 'info');
+                const res = await fetch('/api/services/unblock', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ services: [YOUTUBE_SERVICE_ID], router: routerHost })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    const result = data.results && data.results.find(r => r.router === routerHost || r.router_name === routerHost);
+                    if (result && result.success) {
+                        showAlert(t('service-unblocked-success', { service: 'YouTube', routers: result.router_name || routerHost }), 'success');
+                    } else if (result && !result.success) {
+                        showAlert(`${result.router_name || routerHost}: ${result.error || 'Failed'}`, 'error');
+                    }
+                    await loadYouTubeStatus();
+                    renderYouTubeSection();
+                } else {
+                    showAlert(t('error', { error: data.error || 'Unknown error' }), 'error');
+                }
+            } catch (error) {
+                showAlert(t('error', { error: error.message }), 'error');
+            }
+        }
+
+        async function blockRoblox(routerHost) {
+            try {
+                showAlert(t('blocking-service', { service: 'Roblox', router: getRouterName(routerHost) }), 'info');
+                const res = await fetch('/api/services/block', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ services: [ROBLOX_SERVICE_ID], router: routerHost })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    const result = data.results && data.results.find(r => r.router === routerHost || r.router_name === routerHost);
+                    if (result && result.success) {
+                        showAlert(t('service-blocked-success', { service: 'Roblox', routers: result.router_name || routerHost }), 'success');
+                    } else if (result && !result.success) {
+                        showAlert(`${result.router_name || routerHost}: ${result.error || 'Failed'}`, 'error');
+                    }
+                    await loadRobloxStatus();
+                    renderRobloxSection();
+                } else {
+                    showAlert(t('error', { error: data.error || 'Unknown error' }), 'error');
+                }
+            } catch (error) {
+                showAlert(t('error', { error: error.message }), 'error');
+            }
+        }
+
+        async function enableRoblox(routerHost) {
+            try {
+                showAlert(t('unblocking-service', { service: 'Roblox', router: getRouterName(routerHost) }), 'info');
+                const res = await fetch('/api/services/unblock', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ services: [ROBLOX_SERVICE_ID], router: routerHost })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    const result = data.results && data.results.find(r => r.router === routerHost || r.router_name === routerHost);
+                    if (result && result.success) {
+                        showAlert(t('service-unblocked-success', { service: 'Roblox', routers: result.router_name || routerHost }), 'success');
+                    } else if (result && !result.success) {
+                        showAlert(`${result.router_name || routerHost}: ${result.error || 'Failed'}`, 'error');
+                    }
+                    await loadRobloxStatus();
+                    renderRobloxSection();
+                } else {
+                    showAlert(t('error', { error: data.error || 'Unknown error' }), 'error');
+                }
+            } catch (error) {
+                showAlert(t('error', { error: error.message }), 'error');
+            }
+        }
+
+        function toggleExpand(id) {
+            const body = document.getElementById(id + '-body');
+            const arrow = document.getElementById(id + '-arrow');
+            const toggle = document.getElementById(id + '-toggle');
+            if (!body || !arrow) return;
+            const isExpanded = body.classList.contains('expanded');
+            if (isExpanded) {
+                body.classList.remove('expanded');
+                body.classList.add('collapsed');
+                arrow.classList.remove('expanded');
+                if (toggle) toggle.setAttribute('aria-expanded', 'false');
+            } else {
+                body.classList.remove('collapsed');
+                body.classList.add('expanded');
+                arrow.classList.add('expanded');
+                if (toggle) toggle.setAttribute('aria-expanded', 'true');
+            }
+        }
+
         function renderUI() {
-            // Render all clients
+            // Render all clients (inside expandable body)
             const allClientsList = document.getElementById('all-clients-list');
             allClientsList.innerHTML = '';
             allClients.forEach(client => {
@@ -1266,45 +1685,56 @@
                 allClientsList.appendChild(item);
             });
 
-            // Render categories
+            // Render categories (expandable, collapsed by default)
             const categoriesDiv = document.getElementById('categories');
             categoriesDiv.innerHTML = '';
-            categories.forEach(category => {
+            categories.forEach((category, index) => {
                 const categoryClients = allClients.filter(c => c.category === category.category);
                 if (categoryClients.length === 0) return;
 
+                const expandId = 'category-' + index;
                 const section = document.createElement('div');
                 section.className = 'category-section';
                 section.innerHTML = `
                     <div class="category-card">
                         <div class="category-header">
-                            <div class="category-title">${escapeHtml(category.category)}</div>
-                            <div class="category-actions">
-                                <button class="btn btn-block" onclick="blockCategory('${escapeHtml(category.category)}')">
-                                    <span class="material-icons" style="font-size: 18px;">block</span>
-                                    <span data-i18n="block">${t('block')}</span>
-                                </button>
-                                <button class="btn btn-unblock" onclick="unblockCategory('${escapeHtml(category.category)}')">
-                                    <span class="material-icons" style="font-size: 18px;">check_circle</span>
-                                    <span data-i18n="unblock">${t('unblock')}</span>
-                                </button>
+                            <div class="category-header-row">
+                                <div class="category-header-left">
+                                    <div class="expandable-header" onclick="toggleExpand('${expandId}')" aria-expanded="false" id="${expandId}-toggle">
+                                        <span class="expand-toggle" id="${expandId}-arrow" aria-hidden="true"><span class="material-icons">expand_more</span></span>
+                                        <div class="category-title">${escapeHtml(category.category)}</div>
+                                    </div>
+                                </div>
+                                <div class="category-actions" onclick="event.stopPropagation();">
+                                    <button class="btn btn-block" onclick="blockCategory('${escapeHtml(category.category)}')">
+                                        <span class="material-icons" style="font-size: 18px;">block</span>
+                                        <span data-i18n="block">${t('block')}</span>
+                                    </button>
+                                    <button class="btn btn-unblock" onclick="unblockCategory('${escapeHtml(category.category)}')">
+                                        <span class="material-icons" style="font-size: 18px;">check_circle</span>
+                                        <span data-i18n="unblock">${t('unblock')}</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        <div class="clients-list">
-                            ${categoryClients.map(client => `
-                                <div class="client-item">
-                                    <div class="client-name">${escapeHtml(client.name)}</div>
-                                    <div class="client-mac">${escapeHtml(client.mac)}</div>
-                                </div>
-                            `).join('')}
+                        <div id="${expandId}-body" class="expandable-body collapsed">
+                            <div class="clients-list">
+                                ${categoryClients.map(client => `
+                                    <div class="client-item">
+                                        <div class="client-name">${escapeHtml(client.name)}</div>
+                                        <div class="client-mac">${escapeHtml(client.mac)}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
                         </div>
                     </div>
                 `;
                 categoriesDiv.appendChild(section);
             });
 
-            // Render services
-            renderServices();
+            // Render YouTube and Roblox block sections (per-router)
+            renderYouTubeSection();
+            renderRobloxSection();
         }
 
         async function blockAll() {
@@ -1596,170 +2026,6 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
-        }
-
-        async function blockService(serviceId, serviceName) {
-            const routerName = getRouterName(selectedRouter);
-            if (!confirm(t('confirm-block-service', { service: serviceName, router: routerName }))) return;
-            
-            try {
-                showAlert(t('blocking-service', { service: serviceName, router: routerName }), 'info');
-                const res = await fetch('/api/services/block', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ services: [serviceId], router: selectedRouter })
-                });
-                
-                const data = await res.json();
-                
-                if (res.ok) {
-                    const failedRouters = data.results.filter(r => !r.success);
-                    if (failedRouters.length > 0) {
-                        failedRouters.forEach(router => {
-                            showAlert(`${router.router_name || router.router}: ${router.error || 'Connection failed'}`, 'error');
-                        });
-                    }
-                    
-                    const successfulRouters = data.results.filter(r => r.success);
-                    if (successfulRouters.length > 0) {
-                        const routerNames = successfulRouters.map(r => r.router_name || r.router);
-                        const routerList = routerNames.join(', ');
-                        showAlert(t('service-blocked-success', { service: serviceName, routers: routerList }), 'success');
-                        await loadServiceStatus();
-                        renderServices();
-                    }
-                } else {
-                    showAlert(t('error', { error: data.error || 'Unknown error' }), 'error');
-                }
-            } catch (error) {
-                showAlert(t('error', { error: error.message }), 'error');
-            }
-        }
-
-        async function unblockService(serviceId, serviceName) {
-            const routerName = getRouterName(selectedRouter);
-            if (!confirm(t('confirm-unblock-service', { service: serviceName, router: routerName }))) return;
-            
-            try {
-                showAlert(t('unblocking-service', { service: serviceName, router: routerName }), 'info');
-                const res = await fetch('/api/services/unblock', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ services: [serviceId], router: selectedRouter })
-                });
-                
-                const data = await res.json();
-                
-                if (res.ok) {
-                    const failedRouters = data.results.filter(r => !r.success);
-                    if (failedRouters.length > 0) {
-                        failedRouters.forEach(router => {
-                            showAlert(`${router.router_name || router.router}: ${router.error || 'Connection failed'}`, 'error');
-                        });
-                    }
-                    
-                    const successfulRouters = data.results.filter(r => r.success);
-                    if (successfulRouters.length > 0) {
-                        const routerNames = successfulRouters.map(r => r.router_name || r.router);
-                        const routerList = routerNames.join(', ');
-                        showAlert(t('service-unblocked-success', { service: serviceName, routers: routerList }), 'success');
-                        await loadServiceStatus();
-                        renderServices();
-                    }
-                } else {
-                    showAlert(t('error', { error: data.error || 'Unknown error' }), 'error');
-                }
-            } catch (error) {
-                showAlert(t('error', { error: error.message }), 'error');
-            }
-        }
-
-        async function blockAllServices() {
-            if (services.length === 0) {
-                showAlert('No services available to block.', 'error');
-                return;
-            }
-            
-            const routerName = getRouterName(selectedRouter);
-            if (!confirm(t('confirm-block-all-services', { router: routerName }))) return;
-            
-            try {
-                showAlert(t('blocking-services', { router: routerName }), 'info');
-                const serviceIds = services.map(s => s.id);
-                const res = await fetch('/api/services/block', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ services: serviceIds, router: selectedRouter })
-                });
-                
-                const data = await res.json();
-                
-                if (res.ok) {
-                    const failedRouters = data.results.filter(r => !r.success);
-                    if (failedRouters.length > 0) {
-                        failedRouters.forEach(router => {
-                            showAlert(`${router.router_name || router.router}: ${router.error || 'Connection failed'}`, 'error');
-                        });
-                    }
-                    
-                    const successfulRouters = data.results.filter(r => r.success);
-                    if (successfulRouters.length > 0) {
-                        const routerNames = successfulRouters.map(r => r.router_name || r.router);
-                        const routerList = routerNames.join(', ');
-                        showAlert(t('services-blocked-success', { routers: routerList }), 'success');
-                        await loadServiceStatus();
-                        renderServices();
-                    }
-                } else {
-                    showAlert(t('error', { error: data.error || 'Unknown error' }), 'error');
-                }
-            } catch (error) {
-                showAlert(t('error', { error: error.message }), 'error');
-            }
-        }
-
-        async function unblockAllServices() {
-            if (services.length === 0) {
-                showAlert('No services available to unblock.', 'error');
-                return;
-            }
-            
-            const routerName = getRouterName(selectedRouter);
-            if (!confirm(t('confirm-unblock-all-services', { router: routerName }))) return;
-            
-            try {
-                showAlert(t('unblocking-services', { router: routerName }), 'info');
-                const serviceIds = services.map(s => s.id);
-                const res = await fetch('/api/services/unblock', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ services: serviceIds, router: selectedRouter })
-                });
-                
-                const data = await res.json();
-                
-                if (res.ok) {
-                    const failedRouters = data.results.filter(r => !r.success);
-                    if (failedRouters.length > 0) {
-                        failedRouters.forEach(router => {
-                            showAlert(`${router.router_name || router.router}: ${router.error || 'Connection failed'}`, 'error');
-                        });
-                    }
-                    
-                    const successfulRouters = data.results.filter(r => r.success);
-                    if (successfulRouters.length > 0) {
-                        const routerNames = successfulRouters.map(r => r.router_name || r.router);
-                        const routerList = routerNames.join(', ');
-                        showAlert(t('services-unblocked-success', { routers: routerList }), 'success');
-                        await loadServiceStatus();
-                        renderServices();
-                    }
-                } else {
-                    showAlert(t('error', { error: data.error || 'Unknown error' }), 'error');
-                }
-            } catch (error) {
-                showAlert(t('error', { error: error.message }), 'error');
-            }
         }
 
         // Initialize on page load

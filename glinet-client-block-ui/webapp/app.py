@@ -22,6 +22,7 @@ import requests
 from glinet_block import (
     GLiNetRouter,
     AdGuardHomeClient,
+    AdGuardViaRouter,
     parse_routers_file,
     parse_client_list,
     normalize_mac
@@ -55,6 +56,12 @@ MAPPING_FILE = os.path.join(CONFIG_DIR, 'mapping.csv')
 ROUTERS_FILE = os.path.join(CONFIG_DIR, 'routers.csv')
 CLIENTS_DIR = os.path.join(CONFIG_DIR, 'clients')
 SERVICES_FILE = os.path.join(CONFIG_DIR, 'services.yml')
+
+# Optional AdGuard Home credentials for YouTube block. On GL.iNet, AdGuard is proxied at
+# http://router/control/; use router session (root + router password) via AdGuardViaRouter.
+# Set ADGUARD_PASSWORD (and optionally ADGUARD_USERNAME) only if using direct host:3000 API.
+ADGUARD_USERNAME = os.environ.get('ADGUARD_USERNAME', '').strip() or None
+ADGUARD_PASSWORD = os.environ.get('ADGUARD_PASSWORD', '').strip() or None
 
 # Default password (should be changed via environment variables)
 DEFAULT_PASSWORD = os.environ.get('WEBUI_PASSWORD', 'admin')
@@ -128,6 +135,48 @@ def get_routers_from_env() -> List[Tuple[str, str, str]]:
     
     logger.warning("No routers configured (no env vars or routers.csv found)")
     return []
+
+
+def get_adguard_client(router_host: str, password: str, router_name: str):
+    """
+    Return an AdGuard client (HTTP only): try via router proxy first (root + router password),
+    then direct AdGuard API if ADGUARD_PASSWORD is set.
+    Returns (client, None) on success, (None, error_message) on failure.
+    """
+    # 1) Prefer router proxy: login to GL.iNet, then hit http://router/control/ (nginx proxies to AdGuard).
+    try:
+        router = GLiNetRouter(
+            host=router_host,
+            username="root",
+            password=password,
+            verify_ssl=False,
+            verbose=False,
+        )
+        if router.login():
+            via_router = AdGuardViaRouter(router, verbose=False)
+            if via_router.login():
+                return via_router, None
+        logger.info("AdGuard via router proxy failed for %s, trying direct AdGuard API", router_name)
+    except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+        pass
+    except Exception as e:
+        logger.info("AdGuard via router failed for %s: %s", router_name, e)
+    # 2) Direct AdGuard HTTP API (host:3000) if credentials set
+    adguard_password = ADGUARD_PASSWORD if ADGUARD_PASSWORD else None
+    if adguard_password or ADGUARD_USERNAME:
+        adguard = AdGuardHomeClient(
+            host=router_host,
+            password=adguard_password or password,
+            verify_ssl=False,
+            verbose=False,
+            username=ADGUARD_USERNAME,
+        )
+        try:
+            if adguard.login():
+                return adguard, None
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+            pass
+    return None, "Authentication failed (try router proxy with root + router password, or set ADGUARD_PASSWORD)"
 
 
 def login_required(f):
@@ -768,23 +817,16 @@ def get_services_status():
         for router_host, password, router_name in routers:
             logger.info(f"Getting service status from AdGuard Home on {router_name} ({router_host})")
             try:
-                adguard = AdGuardHomeClient(
-                    host=router_host,
-                    password=password,
-                    verify_ssl=False,
-                    verbose=False
-                )
-                
+                adguard, err = get_adguard_client(router_host, password, router_name)
+                if err or not adguard:
+                    results.append({
+                        'router': router_host,
+                        'router_name': router_name,
+                        'success': False,
+                        'error': err or 'Authentication failed'
+                    })
+                    continue
                 try:
-                    if not adguard.login():
-                        results.append({
-                            'router': router_host,
-                            'router_name': router_name,
-                            'success': False,
-                            'error': 'Authentication failed'
-                        })
-                        continue
-                    
                     blocked_services = adguard.get_blocked_services()
                     if blocked_services is None:
                         results.append({
@@ -892,23 +934,16 @@ def block_service():
         for router_host, password, router_name in routers:
             logger.info(f"Connecting to AdGuard Home on {router_name} ({router_host})")
             try:
-                adguard = AdGuardHomeClient(
-                    host=router_host,
-                    password=password,
-                    verify_ssl=False,
-                    verbose=False
-                )
-                
+                adguard, err = get_adguard_client(router_host, password, router_name)
+                if err or not adguard:
+                    results.append({
+                        'router': router_host,
+                        'router_name': router_name,
+                        'success': False,
+                        'error': err or 'Authentication failed'
+                    })
+                    continue
                 try:
-                    if not adguard.login():
-                        results.append({
-                            'router': router_host,
-                            'router_name': router_name,
-                            'success': False,
-                            'error': 'Authentication failed'
-                        })
-                        continue
-                    
                     # Get current blocked services
                     current = adguard.get_blocked_services()
                     if current is None:
@@ -1018,23 +1053,16 @@ def unblock_service():
         for router_host, password, router_name in routers:
             logger.info(f"Connecting to AdGuard Home on {router_name} ({router_host})")
             try:
-                adguard = AdGuardHomeClient(
-                    host=router_host,
-                    password=password,
-                    verify_ssl=False,
-                    verbose=False
-                )
-                
+                adguard, err = get_adguard_client(router_host, password, router_name)
+                if err or not adguard:
+                    results.append({
+                        'router': router_host,
+                        'router_name': router_name,
+                        'success': False,
+                        'error': err or 'Authentication failed'
+                    })
+                    continue
                 try:
-                    if not adguard.login():
-                        results.append({
-                            'router': router_host,
-                            'router_name': router_name,
-                            'success': False,
-                            'error': 'Authentication failed'
-                        })
-                        continue
-                    
                     # Get current blocked services
                     current = adguard.get_blocked_services()
                     if current is None:

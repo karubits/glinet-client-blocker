@@ -48,6 +48,15 @@ AA:BB:CC:DD:EE:FF,Device Name
 
 3. The files will be automatically mounted into the Docker container at `/config/`
 
+## YouTube block (AdGuard Home)
+
+The YouTube block feature controls AdGuard Home on each router.
+
+**On GL.iNet (root + router password only):** The app uses **HTTP only**. It first logs in to the router (RPC challenge + login with root + router password), then calls **http://router/control/...** (the router’s nginx proxies `location /control/` to AdGuard on port 3000). No separate AdGuard password; the router session authenticates the request.
+
+- **Default:** Router proxy (root + router password). No extra env vars needed.
+- **Optional:** To use direct AdGuard API (host:3000) instead, set an admin user/password in AdGuard on the router and set `ADGUARD_PASSWORD` (and optionally `ADGUARD_USERNAME`) in the app. On stock GL.iNet, AdGuard often has `users: []`, so direct API can hit rate limits (429) after failed logins.
+
 ## Notes
 
 - Files with `.example` suffix are templates and are tracked in git

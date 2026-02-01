@@ -1,65 +1,48 @@
-# GL.iNet Client Blocking Tool
+# GL.iNet Client Block
 
-A Python script and web interface for managing client blocking/unblocking on GL.iNet routers.
+A web interface for managing client blocking/unblocking and service blocking (YouTube, Roblox) on GL.iNet routers via AdGuard Home.
 
 ## Project Structure
 
-This repository contains two separate components:
-
-### 📜 Script (`glinet-client-block-script/`)
-Command-line tool for blocking/unblocking clients. See [`glinet-client-block-script/README.md`](glinet-client-block-script/README.md) for details.
-
-### 🌐 Web UI (`glinet-client-block-ui/`)
-Web interface for managing client blocking/unblocking. See [`glinet-client-block-ui/README.md`](glinet-client-block-ui/README.md) for details.
-
-## Shared Resources
-
-- **`clients/`** - Client list CSV files used by both the script and web UI
-  - See `clients/*.example.csv` for example formats
-  - **Important:** Your actual client lists are in `.gitignore` to protect privacy
+```
+glinet-client-block/
+├── glinet-client-block-ui/    # Web UI (Docker)
+│   ├── config/                # Configuration (mounted as volume)
+│   ├── webapp/                # Flask app and blocking logic
+│   ├── compose.yml
+│   ├── Dockerfile
+│   └── README.md
+├── .env.example               # Example env for Web UI
+└── README.md
+```
 
 ## Setup
 
-### First Time Setup
-
-1. **Copy example files:**
+1. **Copy example files**:
    ```bash
-   # For script usage
-   cd glinet-client-block-script
-   cp routers.example.csv routers.csv
-   
-   # For web UI usage
    cd glinet-client-block-ui
-   cp .env.example .env
-   cp data/mapping.example.csv data/mapping.csv
-   cp data/routers.example.csv data/routers.csv  # Optional if using env vars
-   cp data/clients/*.example.csv data/clients/
+   cp ../.env.example .env
+   cp config/mapping.example.csv config/mapping.csv
+   cp config/routers.example.csv config/routers.csv   # Optional if using env vars
+   cp config/clients/*.example.csv config/clients/
    ```
 
-2. **Edit the files with your actual data:**
-   - Update `routers.csv` with your router IPs and passwords
-   - Update `.env` with your web UI password and router configuration
-   - Update `mapping.csv` with your categories
-   - Update client list CSV files with your device MAC addresses
+2. **Edit configuration**:
+   - **`.env`** – Web UI password, router hosts/passwords (and optional AdGuard credentials). See `.env.example` and `glinet-client-block-ui/README.md`.
+   - **`config/mapping.csv`** – Category name → client list filename.
+   - **`config/routers.csv`** – Router IP and password (only if not using router env vars in `.env`).
+   - **`config/clients/*.csv`** – MAC address and device name per line.
 
-**Security Note:** All personal data files (client lists, routers.csv, .env) are in `.gitignore` and will not be committed to git.
+**Security:** Config files and `.env` are in `.gitignore` and are not committed.
 
 ## Quick Start
 
-### Using the Script
-```bash
-cd glinet-client-block-script
-./setup.sh
-./glinet-block --list ../clients/client-list-games.csv --block
-```
-
-### Using the Web UI
 ```bash
 cd glinet-client-block-ui
-docker-compose up -d
+docker compose up -d
 ```
 
-Then access `http://localhost:5000`
+Then open **http://localhost:5000** and log in with the password set in `WEBUI_PASSWORD` (or `.env`).
 
 ## License
 

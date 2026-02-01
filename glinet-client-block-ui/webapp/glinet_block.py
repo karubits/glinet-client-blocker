@@ -12,6 +12,7 @@ import os
 import json
 import csv
 import getpass
+import logging
 from typing import List, Dict, Optional, Tuple
 from urllib.parse import urlparse
 import urllib3
@@ -538,31 +539,36 @@ class GLiNetRouter:
 class AdGuardHomeClient:
     """AdGuard Home API client for network-wide service blocking."""
     
-    def __init__(self, host: str, password: str, verify_ssl: bool = False, verbose: bool = False, port: int = 3000):
+    def __init__(self, host: str, password: str, verify_ssl: bool = False, verbose: bool = False, port: int = 3000, username: Optional[str] = None):
         """
         Initialize AdGuard Home connection.
         
+        AdGuard Home runs on HTTP port 3000 on the router, regardless of how the
+        GL.iNet admin UI is accessed (HTTPS). We always use http://host:3000.
+        
         Args:
-            host: Router IP address or hostname
+            host: Router IP address or hostname (may include scheme, e.g. https://router)
             password: Router password (used for AdGuard login)
             verify_ssl: Whether to verify SSL certificates (default: False for self-signed)
             verbose: Enable verbose output
             port: AdGuard Home port (default: 3000)
+            username: Optional AdGuard username (if set, try only this; else try admin then root)
         """
-        self.host = host
         self.password = password
+        self.adguard_username = username
         self.verify_ssl = verify_ssl
         self.verbose = verbose
         self.port = port
         
-        # Determine protocol (try HTTPS first, fallback to HTTP)
-        if not host.startswith(('http://', 'https://')):
-            # Try HTTPS first, but we'll handle both
-            self.base_url = f"http://{host}:{port}"
+        # Normalize host: strip scheme and port so we always use HTTP on AdGuard port
+        host_clean = host.strip()
+        if host_clean.startswith(('http://', 'https://')):
+            parsed = urlparse(host_clean)
+            host_clean = parsed.hostname or parsed.netloc.split(':')[0] or host_clean
         else:
-            self.base_url = host
-            parsed = urlparse(host)
-            self.host = parsed.netloc.split(':')[0] if parsed.netloc else host
+            host_clean = host_clean.split(':')[0]
+        self.host = host_clean
+        self.base_url = f"http://{host_clean}:{port}"
         
         self.session = requests.Session()
         
@@ -581,52 +587,103 @@ class AdGuardHomeClient:
             self.session.verify = False
         
         self.authenticated = False
-    
+        self._auth_rate_limited = False  # True if last unauthenticated GET returned 429
+
+    def _try_unauthenticated_access(self) -> bool:
+        """
+        When AdGuard has users: [] (GL.iNet default), authentication is disabled.
+        Try GET /control/blocked_services/get without login; if 200, we can use the API.
+        If 429, AdGuard has temporarily blocked this IP (too many failed logins).
+        """
+        self._auth_rate_limited = False
+        get_url = f"{self.base_url}/control/blocked_services/get"
+        try:
+            response = self.session.get(get_url, timeout=10, verify=self.verify_ssl)
+            if response.status_code == 200:
+                print_debug(f"AdGuard at {self.host}:{self.port} has auth disabled (users: []), using API without login", self.verbose)
+                return True
+            if response.status_code == 429:
+                self._auth_rate_limited = True
+                logger = logging.getLogger(__name__)
+                logger.info(
+                    "AdGuard at %s:%s returned HTTP 429 (rate limited). Too many failed logins; wait ~15 minutes or use router proxy (AdGuardViaRouter).",
+                    self.host, self.port
+                )
+            return False
+        except Exception:
+            return False
+
+    def _do_login(self, username: str) -> bool:
+        """Try login with given username. Returns True if Admin-Token cookie received."""
+        login_url = f"{self.base_url}/control/login"
+        payload = {"name": username, "password": self.password}
+        response = self.session.post(
+            login_url,
+            json=payload,
+            timeout=15,
+            verify=self.verify_ssl
+        )
+        if 'Admin-Token' in self.session.cookies:
+            return True
+        if response.status_code == 200:
+            try:
+                data = response.json()
+                if data.get('ok') or 'Admin-Token' in response.cookies:
+                    return True
+            except Exception:
+                pass
+        # Log failure for diagnostics (always INFO so it appears in docker logs)
+        try:
+            body = response.text[:200] if response.text else "(empty)"
+        except Exception:
+            body = "(unable to read)"
+        logger = logging.getLogger(__name__)
+        logger.info(
+            "AdGuard login failed for %s:%s (username=%s): HTTP %s, body=%s",
+            self.host, self.port, username, response.status_code, body
+        )
+        return False
+
     def login(self) -> bool:
         """
-        Authenticate with AdGuard Home using cookie-based session.
+        Authenticate with AdGuard Home.
+        When AdGuard has users: [] (GL.iNet default), auth is disabled—we try API without login first.
+        Otherwise uses cookie-based login (admin then root).
         
         Returns:
             True if successful, False otherwise
         """
-        login_url = f"{self.base_url}/control/login"
-        
-        payload = {
-            "name": "admin",
-            "password": self.password
-        }
-        
         try:
             print_debug(f"Authenticating to AdGuard Home at {self.host}:{self.port}", self.verbose)
-            response = self.session.post(
-                login_url,
-                json=payload,
-                timeout=15,
-                verify=self.verify_ssl
-            )
-            
-            # Check if Admin-Token cookie was set
-            if 'Admin-Token' in self.session.cookies:
+            # GL.iNet AdGuard often has users: [] so auth is disabled; try unauthenticated access first
+            if self._try_unauthenticated_access():
                 self.authenticated = True
-                print_success(f"Authenticated with AdGuard Home at {self.host}:{self.port}", self.verbose)
+                print_success(f"AdGuard at {self.host}:{self.port} allows unauthenticated access (users: [])", self.verbose)
                 return True
-            else:
-                # Check response status
-                if response.status_code == 200:
-                    # Some implementations might return 200 but not set cookie immediately
-                    # Try to check response body
-                    try:
-                        data = response.json()
-                        if data.get('ok') or 'Admin-Token' in response.cookies:
-                            self.authenticated = True
-                            print_success(f"Authenticated with AdGuard Home at {self.host}:{self.port}", self.verbose)
-                            return True
-                    except:
-                        pass
-                
-                print_error(f"Authentication failed: No Admin-Token cookie received (status: {response.status_code})", self.verbose)
+            # Do not try login when AdGuard has rate-limited this IP (429)
+            if getattr(self, '_auth_rate_limited', False):
+                print_error(
+                    f"AdGuard at {self.host}:{self.port} has temporarily blocked this IP (too many failed logins). "
+                    "Wait ~15 minutes or use router-based access.",
+                    self.verbose
+                )
                 return False
-                
+            if self.adguard_username:
+                if self._do_login(self.adguard_username):
+                    self.authenticated = True
+                    print_success(f"Authenticated with AdGuard Home at {self.host}:{self.port}", self.verbose)
+                    return True
+            else:
+                if self._do_login("admin"):
+                    self.authenticated = True
+                    print_success(f"Authenticated with AdGuard Home at {self.host}:{self.port}", self.verbose)
+                    return True
+                if self._do_login("root"):
+                    self.authenticated = True
+                    print_success(f"Authenticated with AdGuard Home at {self.host}:{self.port} (username=root)", self.verbose)
+                    return True
+            print_error("Authentication failed: No Admin-Token cookie (tried admin and root)", self.verbose)
+            return False
         except requests.exceptions.Timeout:
             print_error(f"Connection timeout during AdGuard Home login to {self.host}:{self.port}", self.verbose)
             raise
@@ -641,8 +698,8 @@ class AdGuardHomeClient:
         """
         Get current blocked services configuration.
         
-        According to spec, this uses GET /control/tls/status, though this seems unusual.
-        If that doesn't work, we'll try /control/blocked_services/list as fallback.
+        AdGuard Home uses GET /control/blocked_services/get which returns
+        {"schedule": {"time_zone": "Asia/Tokyo"}, "ids": ["youtube", ...]}.
         
         Returns:
             Dict with 'ids' (list of service IDs) and 'schedule' (dict with time_zone), or None on error
@@ -651,63 +708,31 @@ class AdGuardHomeClient:
             print_error("Not authenticated. Please login first.", self.verbose)
             return None
         
-        # Try the spec endpoint first
-        status_url = f"{self.base_url}/control/tls/status"
+        get_url = f"{self.base_url}/control/blocked_services/get"
         
         try:
             print_debug(f"Fetching blocked services from {self.host}:{self.port}", self.verbose)
             response = self.session.get(
-                status_url,
-                timeout=10,
-                verify=self.verify_ssl
-            )
-            
-            if response.status_code == 200:
-                try:
-                    data = response.json()
-                    # Check if response has the expected structure
-                    if 'ids' in data or 'schedule' in data:
-                        # Normalize response - ensure we have ids and schedule
-                        result = {
-                            'ids': data.get('ids', []),
-                            'schedule': data.get('schedule', {'time_zone': 'Asia/Tokyo'})
-                        }
-                        print_debug(f"Retrieved {len(result['ids'])} blocked services", self.verbose)
-                        return result
-                except json.JSONDecodeError:
-                    print_debug(f"Response is not JSON, trying fallback endpoint", self.verbose)
-            
-            # Fallback to standard AdGuard Home endpoint
-            fallback_url = f"{self.base_url}/control/blocked_services/list"
-            print_debug(f"Trying fallback endpoint: {fallback_url}", self.verbose)
-            response = self.session.get(
-                fallback_url,
+                get_url,
                 timeout=10,
                 verify=self.verify_ssl
             )
             
             if response.status_code == 200:
                 data = response.json()
-                # Standard AdGuard Home returns just a list of IDs
-                if isinstance(data, list):
-                    result = {
-                        'ids': data,
-                        'schedule': {'time_zone': 'Asia/Tokyo'}  # Default timezone
-                    }
-                elif isinstance(data, dict):
-                    result = {
-                        'ids': data.get('ids', []),
-                        'schedule': data.get('schedule', {'time_zone': 'Asia/Tokyo'})
-                    }
-                else:
-                    result = {
-                        'ids': [],
-                        'schedule': {'time_zone': 'Asia/Tokyo'}
-                    }
-                print_debug(f"Retrieved {len(result['ids'])} blocked services (fallback)", self.verbose)
+                result = {
+                    'ids': data.get('ids', []) if isinstance(data.get('ids'), list) else [],
+                    'schedule': data.get('schedule') if isinstance(data.get('schedule'), dict) else {'time_zone': 'Asia/Tokyo'}
+                }
+                if not result['schedule']:
+                    result['schedule'] = {'time_zone': 'Asia/Tokyo'}
+                print_debug(f"Retrieved {len(result['ids'])} blocked services", self.verbose)
                 return result
             
-            print_error(f"Failed to get blocked services: HTTP {response.status_code}", self.verbose)
+            if response.status_code == 401:
+                print_error("AdGuard Home returned 401 Unauthorized - check password", self.verbose)
+            else:
+                print_error(f"Failed to get blocked services: HTTP {response.status_code}", self.verbose)
             return None
             
         except requests.exceptions.RequestException as e:
@@ -843,6 +868,127 @@ class AdGuardHomeClient:
         self.session.close()
         self.authenticated = False
         print_debug("AdGuard Home session closed", self.verbose)
+
+
+class AdGuardViaRouter:
+    """
+    Access AdGuard Home via the router's proxy: router nginx has location /control/ -> proxy_pass 127.0.0.1:3000.
+    Uses the router session (after GLiNet login) so requests to http://router/control/... are authenticated.
+    No direct AdGuard password; uses root + router password only.
+    """
+
+    def __init__(self, router: "GLiNetRouter", verbose: bool = False):
+        self.router = router
+        self.verbose = verbose
+        # Use same base URL as router (RPC) so session cookies apply. Prefer HTTP port 80 like browser (http://minamicho-router).
+        base = getattr(router, 'base_url', '') or ''
+        if base.startswith(('http://', 'https://')):
+            parsed = urlparse(base)
+            host = parsed.hostname or parsed.netloc.split(':')[0]
+            # Prefer http so cookie (if any) is sent; router nginx proxies /control/ on both 80 and 443
+            self._base_url = f"http://{host}".rstrip('/')
+        else:
+            host = (base or router.host).replace('https://', '').replace('http://', '').split('/')[0].split(':')[0]
+            self._base_url = f"http://{host}".rstrip('/')
+
+    def _session(self):
+        """Session that has router auth (cookies or sid). Prefer python-glinet's session if used."""
+        if getattr(self.router, 'glinet_client', None):
+            s = getattr(self.router.glinet_client, '_session', None) or getattr(self.router.glinet_client, 'session', None)
+            if s is not None:
+                return s
+        return self.router.session
+
+    def _ensure_cookie(self):
+        """Router may expect a session cookie for /control/. Set sid as sysauth so proxy accepts us."""
+        session = self._session()
+        sid = getattr(self.router, 'session_token', None)
+        if not sid or sid == "authenticated":
+            return
+        # Set sysauth (common OpenWrt/GL.iNet session cookie) so router treats us as logged in
+        parsed = urlparse(self._base_url)
+        domain = parsed.hostname or self.router.host
+        if not session.cookies.get("sysauth"):
+            session.cookies.set("sysauth", sid, domain=domain, path="/")
+
+    def _control_url(self, path: str) -> str:
+        """URL for AdGuard control API via router proxy. Add auth token if we have sid (some routers use ?auth=)."""
+        url = f"{self._base_url}/control{path}"
+        sid = getattr(self.router, 'session_token', None)
+        if sid and sid != "authenticated":
+            sep = "&" if "?" in url else "?"
+            url = f"{url}{sep}auth={sid}"
+        return url
+
+    def login(self) -> bool:
+        """Already logged in via router. Verify we can reach AdGuard through the router proxy."""
+        self._ensure_cookie()
+        get_url = self._control_url("/blocked_services/get")
+        try:
+            response = self._session().get(get_url, timeout=15, verify=getattr(self.router, 'verify_ssl', False))
+            if response.status_code == 200:
+                try:
+                    data = response.json()
+                    if isinstance(data.get('ids'), list) or 'ids' in data:
+                        return True
+                except json.JSONDecodeError:
+                    pass
+        except Exception:
+            pass
+        return False
+
+    def get_blocked_services(self) -> Optional[Dict]:
+        get_url = self._control_url("/blocked_services/get")
+        try:
+            response = self._session().get(get_url, timeout=15, verify=getattr(self.router, 'verify_ssl', False))
+            if response.status_code == 200:
+                data = response.json()
+                return {
+                    'ids': data.get('ids', []) if isinstance(data.get('ids'), list) else [],
+                    'schedule': data.get('schedule') if isinstance(data.get('schedule'), dict) else {'time_zone': 'Asia/Tokyo'}
+                }
+        except Exception:
+            pass
+        return None
+
+    def update_blocked_services(self, service_ids: List[str], schedule: Optional[Dict] = None) -> bool:
+        url = self._control_url("/blocked_services/update")
+        payload = {'ids': service_ids, 'schedule': schedule or {'time_zone': 'Asia/Tokyo'}}
+        try:
+            response = self._session().put(
+                url, json=payload, timeout=15, verify=getattr(self.router, 'verify_ssl', False)
+            )
+            if response.status_code == 200:
+                try:
+                    data = response.json()
+                    return data.get('ok') is True or (isinstance(data, dict) and 'ids' in data)
+                except json.JSONDecodeError:
+                    return True
+        except Exception:
+            pass
+        return False
+
+    def block_service(self, service_id: str) -> bool:
+        current = self.get_blocked_services()
+        if not current:
+            return False
+        ids = set(current.get('ids', []))
+        if service_id in ids:
+            return True
+        return self.update_blocked_services(list(ids) + [service_id], current.get('schedule'))
+
+    def unblock_service(self, service_id: str) -> bool:
+        current = self.get_blocked_services()
+        if not current:
+            return False
+        ids = [s for s in current.get('ids', []) if s != service_id]
+        return self.update_blocked_services(ids, current.get('schedule'))
+
+    def logout(self) -> None:
+        try:
+            self.router.logout()
+        except Exception:
+            pass
 
 
 def parse_routers_file(file_path: str) -> List[Tuple[str, str]]:
