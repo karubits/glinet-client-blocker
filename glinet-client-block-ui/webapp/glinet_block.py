@@ -996,7 +996,7 @@ def parse_config_yaml(file_path: str) -> Tuple[List[Tuple[str, str, str]], List[
     """
     Parse config.yaml (single-file config).
     Returns (routers, clients) where routers are (host, password, name) and
-    clients are (mac, name) with normalized MACs. All clients from all mapping categories are merged.
+    clients are (mac, name) with normalized MACs. All clients from all devices categories are merged.
     """
     routers: List[Tuple[str, str, str]] = []
     clients: List[Tuple[str, str]] = []
@@ -1012,21 +1012,21 @@ def parse_config_yaml(file_path: str) -> Tuple[List[Tuple[str, str, str]], List[
                     password = str(r['password']).strip()
                     name = (r.get('name') or host).strip() if r.get('name') else host
                     routers.append((host, password, name))
-        if isinstance(data.get('mapping'), dict):
+        if isinstance(data.get('devices'), dict):
             seen_mac: Dict[str, str] = {}
-            for category, entries in data['mapping'].items():
-                if not isinstance(entries, list):
+            for category, devices_dict in data['devices'].items():
+                if not isinstance(devices_dict, dict):
                     continue
-                for entry in entries:
-                    if not isinstance(entry, dict):
+                for device_name, device_data in devices_dict.items():
+                    if not isinstance(device_data, dict):
                         continue
-                    mac_raw = entry.get('mac') or entry.get('MAC_ADDRESS')
-                    name = (entry.get('name') or entry.get('CLIENT_NAME') or 'Unknown').strip()
+                    mac_raw = device_data.get('mac') or device_data.get('MAC_ADDRESS')
                     if not mac_raw:
                         continue
                     mac = normalize_mac(str(mac_raw).strip())
                     if mac and len(mac.split(':')) == 6 and mac not in seen_mac:
                         seen_mac[mac] = category
+                        name = (device_data.get('name') or device_name or 'Unknown').strip()
                         clients.append((mac, name))
     except FileNotFoundError:
         print_error(f"Config file not found: {file_path}")
@@ -1368,7 +1368,7 @@ Examples:
   # Process multiple client list files
   %(prog)s --list client-list.csv,client-list-media.csv,client-list-games.csv --block
 
-  # Use single config file (routers + mapping)
+  # Use single config file (routers + devices)
   %(prog)s --config /config/config.yaml --block
 
   # Verbose output
@@ -1380,7 +1380,7 @@ Examples:
         '--config',
         type=str,
         metavar='FILE',
-        help='Path to config.yaml (single file with routers, mapping). When set, --routers and --list are ignored.'
+        help='Path to config.yaml (single file with routers, devices). When set, --routers and --list are ignored.'
     )
     parser.add_argument(
         '--router',

@@ -75,7 +75,7 @@ if not PASSWORD_HASH:
 
 
 def _load_config_yaml() -> Optional[Dict]:
-    """Load config.yaml if present. Returns dict with routers, mapping, services or None."""
+    """Load config.yaml if present. Returns dict with routers, devices, services or None."""
     if not os.path.exists(CONFIG_YAML):
         return None
     try:
@@ -266,16 +266,16 @@ def dashboard():
 @app.route('/api/mapping')
 @login_required
 def get_mapping():
-    """Get mapping of categories to client lists (from config.yaml or legacy mapping.csv)."""
+    """Get categories from config.yaml devices or legacy mapping.csv."""
     try:
         mapping = []
         cfg = _load_config_yaml()
-        if cfg and isinstance(cfg.get('mapping'), dict):
-            for category, clients in cfg['mapping'].items():
-                if category and isinstance(clients, list) and len(clients) > 0:
+        if cfg and isinstance(cfg.get('devices'), dict):
+            for category, devices_dict in cfg['devices'].items():
+                if category and isinstance(devices_dict, dict) and len(devices_dict) > 0:
                     mapping.append({
                         'category': category,
-                        'filename': '',  # single-file config
+                        'filename': '',
                         'path': ''
                     })
             if mapping:
@@ -301,25 +301,24 @@ def get_mapping():
 
 
 def _get_clients_list(category: str = 'all') -> List[Dict]:
-    """Helper: get clients from a category or all. Uses config.yaml mapping first, else legacy CSV."""
+    """Helper: get clients from a category or all. Uses config.yaml devices first, else legacy CSV."""
     clients = []
     cfg = _load_config_yaml()
-    if cfg and isinstance(cfg.get('mapping'), dict):
-        mapping_dict = cfg['mapping']
-        for cat_name, client_entries in mapping_dict.items():
-            if not cat_name or not isinstance(client_entries, list):
+    if cfg and isinstance(cfg.get('devices'), dict):
+        for cat_name, devices_dict in cfg['devices'].items():
+            if not cat_name or not isinstance(devices_dict, dict):
                 continue
             if category != 'all' and cat_name != category:
                 continue
-            for entry in client_entries:
-                if not isinstance(entry, dict):
+            for device_name, device_data in devices_dict.items():
+                if not isinstance(device_data, dict):
                     continue
-                mac_raw = entry.get('mac') or entry.get('MAC_ADDRESS')
-                name = (entry.get('name') or entry.get('CLIENT_NAME') or 'Unknown').strip()
+                mac_raw = device_data.get('mac') or device_data.get('MAC_ADDRESS')
                 if not mac_raw:
                     continue
                 mac = normalize_mac(str(mac_raw).strip())
                 if mac and len(mac.split(':')) == 6:
+                    name = (device_data.get('name') or device_name or 'Unknown').strip()
                     clients.append({'mac': mac, 'name': name, 'category': cat_name})
         if clients:
             return clients

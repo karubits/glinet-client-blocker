@@ -4,35 +4,39 @@ This directory contains configuration for the GL.iNet Client Block Web UI.
 
 ## Single-file configuration (recommended)
 
-Use **`config.yaml`** for all settings: routers, client categories, and optional AdGuard services.
+Use **`config.yaml`** for all settings: routers, devices (by category), and optional AdGuard services. All devices live in this single YAML file; no CSV files.
 
 1. Copy the example and edit:
    ```bash
    cp config.example.yaml config.yaml
    ```
-2. Edit `config.yaml` with your routers, categories, and clients.
+2. Edit `config.yaml` with your routers, categories, and devices.
 
 ### config.yaml structure
 
 ```yaml
-# Routers: add as many as you need
+# Routers: add as many as you need (or use Docker Compose env vars)
 routers:
   - host: 192.168.1.1
     password: YourRouterPassword1
-    name: Living Room   # optional display name
+    name: Living Room
   - host: 192.168.1.2
     password: YourRouterPassword2
     name: Office
 
-# Mapping: category name -> list of clients (MAC, name)
-mapping:
+# Devices: category -> device name -> mac (sub-category is the map, then the device)
+devices:
   Gaming Devices:
-    - mac: "AA:BB:CC:DD:EE:01"
-      name: Nintendo Switch
+    nintendo-switch:
+      mac: "AA:BB:CC:DD:EE:01"
+    playstation-5:
+      mac: "AA:BB:CC:DD:EE:02"
   TV Devices:
-    - mac: "AA:BB:CC:DD:EE:10"
-      name: Smart TV
-  # Add more categories and clients as needed
+    smart-tv:
+      mac: "AA:BB:CC:DD:EE:10"
+    apple-tv:
+      mac: "AA:BB:CC:DD:EE:11"
+  # Add more categories and devices as needed
 
 # Optional: AdGuard Home service IDs (YouTube, Roblox, etc.)
 services:
@@ -40,11 +44,11 @@ services:
   - roblox
 ```
 
-- **routers**: List of `host`, `password`, and optional `name`. Add more entries for multiple routers.
-- **mapping**: Category names as keys; each value is a list of `mac` and `name`. Add more categories and clients as needed.
+- **routers**: List of `host`, `password`, and optional `name`. Prefer defining routers in Docker Compose env vars.
+- **devices**: Category names as keys; each value is a dict of device name → `mac` (and optional `name` for display). Add more categories and devices as needed.
 - **services**: Optional list of AdGuard service IDs for network-wide blocking in the Web UI.
 
-The file is designed to be expanded: add more routers, categories, clients, or services without changing the format.
+The file is designed to be expanded: add more routers, categories, or devices without changing the format.
 
 ## Legacy configuration (optional)
 

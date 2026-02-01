@@ -12,31 +12,29 @@ routers:
     password: YourRouterPassword2
     name: Office
 
-# Mapping: category name -> list of clients (MAC, name)
-# Add more categories and clients as needed
-mapping:
+# Devices: category -> device name -> mac (all in one YAML, no CSV)
+# The sub-key is the category; each device key is the device name with mac underneath.
+devices:
   Gaming Devices:
-    - mac: "AA:BB:CC:DD:EE:01"
-      name: Nintendo Switch - Living Room
-    - mac: "AA:BB:CC:DD:EE:02"
-      name: PlayStation 5
-    - mac: "AA:BB:CC:DD:EE:03"
-      name: Xbox Series X
+    nintendo-switch:
+      mac: "AA:BB:CC:DD:EE:01"
+    playstation-5:
+      mac: "AA:BB:CC:DD:EE:02"
+    xbox-series-x:
+      mac: "AA:BB:CC:DD:EE:03"
   TV Devices:
-    - mac: "AA:BB:CC:DD:EE:10"
-      name: Smart TV - Living Room
-    - mac: "AA:BB:CC:DD:EE:11"
-      name: Apple TV
-    - mac: "AA:BB:CC:DD:EE:12"
-      name: Chromecast
-  # Example: add more categories
+    smart-tv-living-room:
+      mac: "AA:BB:CC:DD:EE:10"
+    apple-tv:
+      mac: "AA:BB:CC:DD:EE:11"
+    chromecast:
+      mac: "AA:BB:CC:DD:EE:12"
+  # Add more categories and devices as needed
   # Work Devices:
-  #   - mac: "AA:BB:CC:DD:EE:20"
-  #     name: Laptop - Office
+  #   laptop-office:
+  #     mac: "AA:BB:CC:DD:EE:20"
 
 # Optional: AdGuard Home service IDs for network-wide blocking (e.g. YouTube, Roblox)
-# Used by the Web UI "YouTube Block" / "Roblox Block" features
 services:
   - youtube
   - roblox
-  # Add more AdGuard service IDs as needed
