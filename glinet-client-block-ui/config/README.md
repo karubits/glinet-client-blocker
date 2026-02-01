@@ -1,64 +1,82 @@
 # Configuration Directory
 
-This directory contains all user-configurable files for the GL.iNet Client Block Web UI.
+This directory contains configuration for the GL.iNet Client Block Web UI.
 
-## Files
+## Single-file configuration (recommended)
 
-### `mapping.csv`
-Maps categories to client list files. Format:
-```
-Category Name,client-list-filename.csv
+Use **`config.yaml`** for all settings: routers, client categories, and optional AdGuard services.
+
+1. Copy the example and edit:
+   ```bash
+   cp config.example.yaml config.yaml
+   ```
+2. Edit `config.yaml` with your routers, categories, and clients.
+
+### config.yaml structure
+
+```yaml
+# Routers: add as many as you need
+routers:
+  - host: 192.168.1.1
+    password: YourRouterPassword1
+    name: Living Room   # optional display name
+  - host: 192.168.1.2
+    password: YourRouterPassword2
+    name: Office
+
+# Mapping: category name -> list of clients (MAC, name)
+mapping:
+  Gaming Devices:
+    - mac: "AA:BB:CC:DD:EE:01"
+      name: Nintendo Switch
+  TV Devices:
+    - mac: "AA:BB:CC:DD:EE:10"
+      name: Smart TV
+  # Add more categories and clients as needed
+
+# Optional: AdGuard Home service IDs (YouTube, Roblox, etc.)
+services:
+  - youtube
+  - roblox
 ```
 
-Example:
-```
-Gaming Devices,client-list-games.csv
-TV Devices,client-list-media.csv
-```
+- **routers**: List of `host`, `password`, and optional `name`. Add more entries for multiple routers.
+- **mapping**: Category names as keys; each value is a list of `mac` and `name`. Add more categories and clients as needed.
+- **services**: Optional list of AdGuard service IDs for network-wide blocking in the Web UI.
 
-### `services.yml`
-Configuration for network-wide service blocking via AdGuard Home. Lists all available services that can be blocked.
+The file is designed to be expanded: add more routers, categories, clients, or services without changing the format.
 
-### `routers.csv` (Optional)
-Router configuration file. Only needed if not using environment variables.
-Format:
-```
-HOST,PASS
-100.65.142.110,password1
-100.122.185.100,password2
-```
+## Legacy configuration (optional)
 
-### `clients/` directory
-Contains client list CSV files. Each file should have the format:
-```
-MAC_ADDRESS,CLIENT_NAME
-AA:BB:CC:DD:EE:FF,Device Name
-```
+If `config.yaml` is not present, the app falls back to:
+
+- **routers.csv** – Router list (HOST,PASS). Only used when env vars and config.yaml are not set.
+- **mapping.csv** – Category name and client list filename per line.
+- **clients/** – Directory of client list CSV files (MAC_ADDRESS,CLIENT_NAME).
+- **services.yml** – Optional `services:` list for AdGuard.
+
+Prefer `config.yaml` to avoid maintaining multiple files.
 
 ## Setup
 
-1. Copy example files:
+1. Copy and edit:
    ```bash
-   cp mapping.example.csv mapping.csv
-   cp routers.example.csv routers.csv  # Optional
-   cp clients/*.example.csv clients/
+   cp config.example.yaml config.yaml
    ```
+2. Fill in your routers, client categories, and MAC addresses.
+3. Mount this directory into the container at `/config/` (e.g. in `compose.yml`: `./config:/config:ro`).
 
-2. Edit the files with your actual data
+## YouTube / Roblox block (AdGuard Home)
 
-3. The files will be automatically mounted into the Docker container at `/config/`
+The Web UI controls AdGuard Home on each router.
 
-## YouTube block (AdGuard Home)
+**On GL.iNet (root + router password only):** The app uses the router proxy. It logs in to the router (root + router password), then calls **http://router/control/...** (nginx proxies to AdGuard on port 3000). No separate AdGuard password is needed.
 
-The YouTube block feature controls AdGuard Home on each router.
-
-**On GL.iNet (root + router password only):** The app uses **HTTP only**. It first logs in to the router (RPC challenge + login with root + router password), then calls **http://router/control/...** (the router’s nginx proxies `location /control/` to AdGuard on port 3000). No separate AdGuard password; the router session authenticates the request.
-
-- **Default:** Router proxy (root + router password). No extra env vars needed.
-- **Optional:** To use direct AdGuard API (host:3000) instead, set an admin user/password in AdGuard on the router and set `ADGUARD_PASSWORD` (and optionally `ADGUARD_USERNAME`) in the app. On stock GL.iNet, AdGuard often has `users: []`, so direct API can hit rate limits (429) after failed logins.
+- **Default:** Router proxy (root + router password). No extra env vars.
+- **Optional:** To use the direct AdGuard API (host:3000), set an admin user/password in AdGuard and set `ADGUARD_PASSWORD` (and optionally `ADGUARD_USERNAME`) in the app.
 
 ## Notes
 
-- Files with `.example` suffix are templates and are tracked in git
-- Actual configuration files (without `.example`) are ignored by git for security
-- All files in this directory are mounted read-only in the Docker container
+- `config.yaml` contains credentials and is ignored by git.
+- `config.example.yaml` is a template and is tracked in git.
+- The config directory is typically mounted read-only in the container.

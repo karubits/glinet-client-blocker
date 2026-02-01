@@ -8,6 +8,8 @@ A web interface for managing client blocking/unblocking and service blocking (Yo
 glinet-client-block/
 ├── glinet-client-block-ui/    # Web UI (Docker)
 │   ├── config/                # Configuration (mounted as volume)
+│   │   ├── config.example.yaml   # Template; copy to config.yaml
+│   │   └── README.md
 │   ├── webapp/                # Flask app and blocking logic
 │   ├── compose.yml
 │   ├── Dockerfile
@@ -18,22 +20,18 @@ glinet-client-block/
 
 ## Setup
 
-1. **Copy example files**:
+1. **Copy config and env**:
    ```bash
    cd glinet-client-block-ui
    cp ../.env.example .env
-   cp config/mapping.example.csv config/mapping.csv
-   cp config/routers.example.csv config/routers.csv   # Optional if using env vars
-   cp config/clients/*.example.csv config/clients/
+   cp config/config.example.yaml config/config.yaml
    ```
 
 2. **Edit configuration**:
-   - **`.env`** – Web UI password, router hosts/passwords (and optional AdGuard credentials). See `.env.example` and `glinet-client-block-ui/README.md`.
-   - **`config/mapping.csv`** – Category name → client list filename.
-   - **`config/routers.csv`** – Router IP and password (only if not using router env vars in `.env`).
-   - **`config/clients/*.csv`** – MAC address and device name per line.
+   - **`.env`** – Web UI password; optional router hosts/passwords (see `.env.example` and `glinet-client-block-ui/README.md`).
+   - **`config/config.yaml`** – Single file for routers, client categories (mapping), and optional AdGuard services. See `config/config.example.yaml` and `config/README.md`.
 
-**Security:** Config files and `.env` are in `.gitignore` and are not committed.
+**Security:** `config/config.yaml` and `.env` are in `.gitignore` and are not committed.
 
 ## Quick Start
 

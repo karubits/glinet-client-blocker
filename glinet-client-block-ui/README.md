@@ -28,18 +28,15 @@ A clean, user-friendly web interface for managing client blocking/unblocking on 
    export ROUTER_PASS_2="password2"
    ```
 
-2. **Prepare configuration files**:
+2. **Prepare configuration**:
    ```bash
-   # Copy example files and customize them
-   cp config/mapping.example.csv config/mapping.csv
-   cp config/routers.example.csv config/routers.csv  # Optional if using env vars
-   cp config/clients/*.example.csv config/clients/
+   # Copy single config file and customize
+   cp config/config.example.yaml config/config.yaml
    
-   # Edit the files with your actual data:
-   # - Update mapping.csv with your categories
-   # - Update routers.csv with your router IPs/passwords (or use env vars)
-   # - Update client list CSV files with your device MAC addresses
-   # - Update services.yml with your service blocking preferences
+   # Edit config.yaml with your:
+   # - Routers (host, password, optional name)
+   # - Mapping: category -> list of clients (mac, name)
+   # - Optional: services list for AdGuard (e.g. youtube, roblox)
    ```
 
 3. **Build and run**:
@@ -73,8 +70,11 @@ ROUTER_NAME_2="Minamicho House"
 # Add ROUTER_HOST_3, ROUTER_PASS_3, ROUTER_NAME_3 as needed
 ```
 
-### Method 3: routers.csv File (Fallback)
-If no environment variables are set, the web UI will look for `config/routers.csv`:
+### Method 3: config.yaml (recommended single file)
+Use `config/config.yaml` for routers, client mapping, and optional services. Copy from `config/config.example.yaml` and edit. See `config/README.md` for the format.
+
+### Method 4: routers.csv (legacy fallback)
+If no environment variables and no `config.yaml`, the web UI looks for `config/routers.csv`:
 ```
 HOST,PASS
 100.65.142.110,password1
@@ -92,20 +92,19 @@ glinet-client-block-ui/
 │   │   ├── login.html
 │   │   └── dashboard.html
 │   └── static/          # Static assets
-├── config/              # User configuration files (mounted as volume)
-│   ├── mapping.csv      # Category to file mapping
-│   ├── services.yml     # Service blocking configuration
-│   ├── routers.csv      # Router configuration (optional)
-│   └── clients/         # Client list CSV files
+├── config/              # Configuration (mounted as volume)
+│   ├── config.yaml      # Single file: routers, mapping, services (copy from config.example.yaml)
+│   ├── config.example.yaml
+│   └── README.md        # Config format and legacy options
 ├── Dockerfile
 ├── compose.yml
 └── README.md
 ```
 
 **Note:** 
-- Configuration files in `config/` are mounted into the container at `/config/`
-- Client list files should be placed in `config/clients/`
-- Example files (`.example.csv`, `.example.yml`) are provided as templates
+- `config/config.yaml` holds routers, client categories (mapping), and optional AdGuard services.
+- Copy `config/config.example.yaml` to `config/config.yaml` and edit.
+- The config directory is mounted into the container at `/config/`.
 
 ## Environment Variables
 
@@ -150,14 +149,13 @@ docker compose logs -f glinet-webui
 ## Troubleshooting
 
 ### "No routers configured"
-- Set router env vars in `.env` (e.g. `ROUTER_HOST_1`, `ROUTER_PASS_1`, `ROUTER_NAME_1`) or use `config/routers.csv`
-- Run from `glinet-client-block-ui` so `.env` and `config/` are available: `docker compose up -d`
+- Use `config/config.yaml` with a `routers:` list, or set router env vars in `.env` (e.g. `ROUTER_HOST_1`, `ROUTER_PASS_1`), or use legacy `config/routers.csv`
+- Run from `glinet-client-block-ui` so `config/` is available: `docker compose up -d`
 - Check logs: `docker compose logs glinet-webui`
 
 ### "No clients found"
-- Ensure `config/mapping.csv` exists and maps category names to filenames under `config/clients/`
-- Put client list CSVs in `config/clients/` (e.g. `client-list-games.csv`) with format `MAC_ADDRESS,CLIENT_NAME`
-- Confirm the `config` directory is mounted (compose mounts `./config:/config:ro`)
+- Use `config/config.yaml` with a `mapping:` section (category → list of `mac`/`name`), or use legacy `config/mapping.csv` and client CSVs in `config/clients/`
+- Confirm the config directory is mounted (compose: `./config:/config:ro`)
 
 ### YouTube / Roblox block fails
 - By default the app uses the router proxy (root + router password); no AdGuard password needed

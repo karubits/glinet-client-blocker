@@ -50,18 +50,20 @@ Thumbs.db
 .env.local
 config.ini
 
-# Router Configuration - Personal Information
+# Router Configuration - Personal Information (legacy; prefer config.yaml)
 config/routers.csv
 
-# Client Lists - Personal Information
+# Client Lists - Personal Information (legacy; prefer config.yaml mapping)
 config/clients/*.csv
-!config/clients/*.example.csv
 
-# Mapping - Personal Information
+# Mapping - Personal Information (legacy; prefer config.yaml)
 config/mapping.csv
-!config/mapping.example.csv
 
-# Services Configuration - Personal Information
+# Single-file config (contains routers, clients, services)
+config/config.yaml
+!config/config.example.yaml
+
+# Services Configuration - Personal Information (legacy; prefer config.yaml)
 config/services.yml
 !config/services.example.yml
 

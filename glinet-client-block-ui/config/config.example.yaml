@@ -1,0 +1,42 @@
+# GL.iNet Client Block - Single file configuration
+# Copy to config.yaml and fill in your values.
+# config.yaml is ignored by git for security.
+
+# Routers: preferably define in Docker Compose as env variables (ROUTER_HOST_1, ROUTER_PASS_1, ROUTER_NAME_1, etc.).
+# Use this section only if you are not using env vars (e.g. when running the CLI or without compose).
+routers:
+  - host: 192.168.1.1
+    password: YourRouterPassword1
+    name: Living Room   # optional display name
+  - host: 192.168.1.2
+    password: YourRouterPassword2
+    name: Office
+
+# Mapping: category name -> list of clients (MAC, name)
+# Add more categories and clients as needed
+mapping:
+  Gaming Devices:
+    - mac: "AA:BB:CC:DD:EE:01"
+      name: Nintendo Switch - Living Room
+    - mac: "AA:BB:CC:DD:EE:02"
+      name: PlayStation 5
+    - mac: "AA:BB:CC:DD:EE:03"
+      name: Xbox Series X
+  TV Devices:
+    - mac: "AA:BB:CC:DD:EE:10"
+      name: Smart TV - Living Room
+    - mac: "AA:BB:CC:DD:EE:11"
+      name: Apple TV
+    - mac: "AA:BB:CC:DD:EE:12"
+      name: Chromecast
+  # Example: add more categories
+  # Work Devices:
+  #   - mac: "AA:BB:CC:DD:EE:20"
+  #     name: Laptop - Office
+
+# Optional: AdGuard Home service IDs for network-wide blocking (e.g. YouTube, Roblox)
+# Used by the Web UI "YouTube Block" / "Roblox Block" features
+services:
+  - youtube
+  - roblox
+  # Add more AdGuard service IDs as needed

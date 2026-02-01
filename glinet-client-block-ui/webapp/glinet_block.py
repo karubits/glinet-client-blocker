@@ -13,6 +13,7 @@ import json
 import csv
 import getpass
 import logging
+import yaml
 from typing import List, Dict, Optional, Tuple
 from urllib.parse import urlparse
 import urllib3
@@ -991,6 +992,54 @@ class AdGuardViaRouter:
             pass
 
 
+def parse_config_yaml(file_path: str) -> Tuple[List[Tuple[str, str, str]], List[Tuple[str, str]]]:
+    """
+    Parse config.yaml (single-file config).
+    Returns (routers, clients) where routers are (host, password, name) and
+    clients are (mac, name) with normalized MACs. All clients from all mapping categories are merged.
+    """
+    routers: List[Tuple[str, str, str]] = []
+    clients: List[Tuple[str, str]] = []
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f)
+        if not data or not isinstance(data, dict):
+            return routers, clients
+        if isinstance(data.get('routers'), list):
+            for r in data['routers']:
+                if isinstance(r, dict) and r.get('host') and r.get('password'):
+                    host = str(r['host']).strip()
+                    password = str(r['password']).strip()
+                    name = (r.get('name') or host).strip() if r.get('name') else host
+                    routers.append((host, password, name))
+        if isinstance(data.get('mapping'), dict):
+            seen_mac: Dict[str, str] = {}
+            for category, entries in data['mapping'].items():
+                if not isinstance(entries, list):
+                    continue
+                for entry in entries:
+                    if not isinstance(entry, dict):
+                        continue
+                    mac_raw = entry.get('mac') or entry.get('MAC_ADDRESS')
+                    name = (entry.get('name') or entry.get('CLIENT_NAME') or 'Unknown').strip()
+                    if not mac_raw:
+                        continue
+                    mac = normalize_mac(str(mac_raw).strip())
+                    if mac and len(mac.split(':')) == 6 and mac not in seen_mac:
+                        seen_mac[mac] = category
+                        clients.append((mac, name))
+    except FileNotFoundError:
+        print_error(f"Config file not found: {file_path}")
+        sys.exit(1)
+    except yaml.YAMLError as e:
+        print_error(f"YAML error in config file: {e}")
+        sys.exit(1)
+    except Exception as e:
+        print_error(f"Error reading config file: {e}")
+        sys.exit(1)
+    return routers, clients
+
+
 def parse_routers_file(file_path: str) -> List[Tuple[str, str]]:
     """
     Parse routers file.
@@ -1319,26 +1368,34 @@ Examples:
   # Process multiple client list files
   %(prog)s --list client-list.csv,client-list-media.csv,client-list-games.csv --block
 
+  # Use single config file (routers + mapping)
+  %(prog)s --config /config/config.yaml --block
+
   # Verbose output
   %(prog)s --list client-list.txt --block --verbose
         """
     )
     
     parser.add_argument(
+        '--config',
+        type=str,
+        metavar='FILE',
+        help='Path to config.yaml (single file with routers, mapping). When set, --routers and --list are ignored.'
+    )
+    parser.add_argument(
         '--router',
         type=str,
-        help='Router IP address or hostname (default: from router-list.txt or environment). Ignored if --routers is specified.'
+        help='Router IP address or hostname (default: from router-list.txt or environment). Ignored if --routers or --config is specified.'
     )
     parser.add_argument(
         '--routers',
         type=str,
-        help='Path to routers file (format: HOST,PASS). If specified, processes all routers in the file.'
+        help='Path to routers file (format: HOST,PASS). If specified, processes all routers in the file. Ignored if --config is specified.'
     )
     parser.add_argument(
         '--list',
         type=str,
-        required=True,
-        help='Path to client list file(s) (format: MAC,NAME). Multiple files can be specified comma-separated: file1.csv,file2.csv,file3.csv'
+        help='Path to client list file(s) (format: MAC,NAME). Multiple files comma-separated. Required unless --config is specified.'
     )
     parser.add_argument(
         '--block',
@@ -1381,68 +1438,72 @@ Examples:
     if args.block and args.unblock:
         parser.error("Cannot specify both --block and --unblock")
     
-    # Parse client list(s) - supports comma-separated multiple files
-    clients = parse_client_lists(args.list)
-    if not clients:
-        print_error("No clients found in list file(s)")
-        sys.exit(1)
+    if args.config and not args.list:
+        pass  # --config mode: list not required
+    elif not args.list:
+        parser.error("Must specify --list or --config")
     
-    # Count how many files were specified
-    file_count = len([f.strip() for f in args.list.split(',') if f.strip()])
-    if file_count > 1:
-        print_info(f"Found {len(clients)} clients from {file_count} list file(s)", args.verbose)
+    # Load clients and routers (from config.yaml or from --list / --routers)
+    clients: List[Tuple[str, str]] = []
+    routers: List[Tuple[str, str]] = []
+    
+    if args.config:
+        routers_with_names, clients = parse_config_yaml(args.config)
+        routers = [(h, p) for h, p, _ in routers_with_names]
+        if not clients:
+            print_error("No clients found in config file")
+            sys.exit(1)
+        if not routers:
+            print_error("No routers found in config file")
+            sys.exit(1)
+        print_info(f"Found {len(clients)} clients and {len(routers)} router(s) from config", args.verbose)
     else:
-        print_info(f"Found {len(clients)} clients in list", args.verbose)
+        clients = parse_client_lists(args.list)
+        if not clients:
+            print_error("No clients found in list file(s)")
+            sys.exit(1)
+        file_count = len([f.strip() for f in args.list.split(',') if f.strip()])
+        if file_count > 1:
+            print_info(f"Found {len(clients)} clients from {file_count} list file(s)", args.verbose)
+        else:
+            print_info(f"Found {len(clients)} clients in list", args.verbose)
     
-    # Determine action
     action = "block" if args.block else "unblock"
     
-    # Handle routers
-    routers = []
-    
-    if args.routers:
-        # Parse routers from file
-        routers = parse_routers_file(args.routers)
-        if not routers:
-            print_error("No routers found in routers file")
-            sys.exit(1)
-        print_info(f"Found {len(routers)} router(s) in file", args.verbose)
-    else:
-        # Single router mode
-        # Get password from command line, environment, or prompt securely
-        password = args.password or os.getenv('GLINET_PASSWORD', '')
-        if not password:
-            # Prompt for password securely (input is hidden)
-            try:
-                password = getpass.getpass("Enter router password: ")
-                if not password:
-                    print_error("Password cannot be empty")
+    if not args.config:
+        if args.routers:
+            routers = parse_routers_file(args.routers)
+            if not routers:
+                print_error("No routers found in routers file")
+                sys.exit(1)
+            print_info(f"Found {len(routers)} router(s) in file", args.verbose)
+        else:
+            # Single router mode
+            password = args.password or os.getenv('GLINET_PASSWORD', '')
+            if not password:
+                try:
+                    password = getpass.getpass("Enter router password: ")
+                    if not password:
+                        print_error("Password cannot be empty")
+                        sys.exit(1)
+                except (KeyboardInterrupt, EOFError):
+                    print_error("\nPassword input cancelled")
                     sys.exit(1)
-            except (KeyboardInterrupt, EOFError):
-                print_error("\nPassword input cancelled")
-                sys.exit(1)
-        
-        # Get router address
-        router_host = args.router
-        if not router_host:
-            # Try to read from router-list.txt
-            try:
-                with open('router-list.txt', 'r') as f:
-                    line = f.readline().strip()
-                    if line:
-                        router_host = line.split()[0] if ' ' in line else line
-            except FileNotFoundError:
-                pass
-            
+            router_host = args.router
             if not router_host:
-                router_host = os.getenv('GLINET_ROUTER', '')
-            
-            if not router_host:
-                print_error("No router specified. Use --router, --routers, or set GLINET_ROUTER env var.")
-                sys.exit(1)
-        
-        # Add single router to list
-        routers = [(router_host, password)]
+                try:
+                    with open('router-list.txt', 'r') as f:
+                        line = f.readline().strip()
+                        if line:
+                            router_host = line.split()[0] if ' ' in line else line
+                except FileNotFoundError:
+                    pass
+                if not router_host:
+                    router_host = os.getenv('GLINET_ROUTER', '')
+                if not router_host:
+                    print_error("No router specified. Use --config, --router, --routers, or set GLINET_ROUTER env var.")
+                    sys.exit(1)
+            routers = [(router_host, password)]
     
     # Process each router
     total_success = 0

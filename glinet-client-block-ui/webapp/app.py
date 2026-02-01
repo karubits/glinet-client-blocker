@@ -52,6 +52,7 @@ if not os.path.exists(CONFIG_DIR):
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     CONFIG_DIR = os.path.join(BASE_DIR, 'data')
 
+CONFIG_YAML = os.path.join(CONFIG_DIR, 'config.yaml')
 MAPPING_FILE = os.path.join(CONFIG_DIR, 'mapping.csv')
 ROUTERS_FILE = os.path.join(CONFIG_DIR, 'routers.csv')
 CLIENTS_DIR = os.path.join(CONFIG_DIR, 'clients')
@@ -73,67 +74,91 @@ if not PASSWORD_HASH:
     PASSWORD_HASH = generate_password_hash(DEFAULT_PASSWORD)
 
 
+def _load_config_yaml() -> Optional[Dict]:
+    """Load config.yaml if present. Returns dict with routers, mapping, services or None."""
+    if not os.path.exists(CONFIG_YAML):
+        return None
+    try:
+        with open(CONFIG_YAML, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f)
+            return data if isinstance(data, dict) else None
+    except yaml.YAMLError as e:
+        logger.error(f"YAML error in {CONFIG_YAML}: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Error reading {CONFIG_YAML}: {e}")
+        return None
+
+
 def get_routers_from_env() -> List[Tuple[str, str, str]]:
     """
-    Get routers from environment variables.
-    Supports ROUTER_HOST_1, ROUTER_PASS_1, ROUTER_NAME_1, etc.
-    Also supports comma-separated ROUTER_HOSTS and ROUTER_PASSES.
-    Falls back to routers.csv file if env vars not set.
+    Get routers from (in order): env vars, config.yaml, routers.csv.
     Returns list of (host, password, name) tuples.
     """
     routers = []
-    
-    # Try comma-separated lists first
+
+    # 1) Try comma-separated env lists
     router_hosts = os.environ.get('ROUTER_HOSTS', '').strip()
     router_passes = os.environ.get('ROUTER_PASSES', '').strip()
-    
+
     if router_hosts and router_passes:
         hosts = [h.strip() for h in router_hosts.split(',') if h.strip()]
         passes = [p.strip() for p in router_passes.split(',') if p.strip()]
-        
+
         if len(hosts) == len(passes):
             for i, (host, password) in enumerate(zip(hosts, passes), 1):
                 name = os.environ.get(f'ROUTER_NAME_{i}', '').strip() or host
                 routers.append((host, password, name))
             logger.info(f"Loaded {len(routers)} router(s) from ROUTER_HOSTS/ROUTER_PASSES env vars")
             return routers
-        else:
-            logger.warning("ROUTER_HOSTS and ROUTER_PASSES have different lengths, ignoring")
-    
-    # Try numbered environment variables (ROUTER_HOST_1, ROUTER_PASS_1, ROUTER_NAME_1, etc.)
+        logger.warning("ROUTER_HOSTS and ROUTER_PASSES have different lengths, ignoring")
+
+    # 2) Try numbered env vars
     i = 1
     while True:
         host = os.environ.get(f'ROUTER_HOST_{i}', '').strip()
         password = os.environ.get(f'ROUTER_PASS_{i}', '').strip()
-        
+
         if not host:
             break
-        
+
         if password:
             name = os.environ.get(f'ROUTER_NAME_{i}', '').strip() or host
             routers.append((host, password, name))
             logger.info(f"Loaded router {i}: {name} ({host})")
         else:
             logger.warning(f"ROUTER_HOST_{i} set but ROUTER_PASS_{i} missing, skipping")
-        
+
         i += 1
-    
+
     if routers:
         logger.info(f"Loaded {len(routers)} router(s) from environment variables")
         return routers
-    
-    # Fall back to routers.csv file
+
+    # 3) config.yaml
+    cfg = _load_config_yaml()
+    if cfg and isinstance(cfg.get('routers'), list):
+        for r in cfg['routers']:
+            if isinstance(r, dict) and r.get('host') and r.get('password'):
+                host = str(r['host']).strip()
+                password = str(r['password']).strip()
+                name = (r.get('name') or host).strip() if r.get('name') else host
+                routers.append((host, password, name))
+        if routers:
+            logger.info(f"Loaded {len(routers)} router(s) from {CONFIG_YAML}")
+            return routers
+
+    # 4) Fall back to routers.csv
     if os.path.exists(ROUTERS_FILE):
         try:
             router_list = parse_routers_file(ROUTERS_FILE)
-            # Convert to (host, password, name) format, using host as name
             routers = [(host, password, host) for host, password in router_list]
             logger.info(f"Loaded {len(routers)} router(s) from {ROUTERS_FILE}")
             return routers
         except Exception as e:
             logger.error(f"Error reading routers.csv: {e}")
-    
-    logger.warning("No routers configured (no env vars or routers.csv found)")
+
+    logger.warning("No routers configured (no env vars, config.yaml, or routers.csv)")
     return []
 
 
@@ -241,9 +266,20 @@ def dashboard():
 @app.route('/api/mapping')
 @login_required
 def get_mapping():
-    """Get mapping of categories to client list files."""
+    """Get mapping of categories to client lists (from config.yaml or legacy mapping.csv)."""
     try:
         mapping = []
+        cfg = _load_config_yaml()
+        if cfg and isinstance(cfg.get('mapping'), dict):
+            for category, clients in cfg['mapping'].items():
+                if category and isinstance(clients, list) and len(clients) > 0:
+                    mapping.append({
+                        'category': category,
+                        'filename': '',  # single-file config
+                        'path': ''
+                    })
+            if mapping:
+                return jsonify({'mapping': mapping})
         if os.path.exists(MAPPING_FILE):
             with open(MAPPING_FILE, 'r', encoding='utf-8') as f:
                 reader = csv.reader(f)
@@ -251,9 +287,7 @@ def get_mapping():
                     if len(row) >= 2 and row[0].strip() and row[1].strip():
                         category = row[0].strip()
                         filename = row[1].strip()
-                        # Check if file exists in clients directory
                         file_path = os.path.join(CLIENTS_DIR, filename)
-                        
                         if os.path.exists(file_path):
                             mapping.append({
                                 'category': category,
@@ -267,53 +301,47 @@ def get_mapping():
 
 
 def _get_clients_list(category: str = 'all') -> List[Dict]:
-    """Helper function to get clients from a specific category or all categories."""
+    """Helper: get clients from a category or all. Uses config.yaml mapping first, else legacy CSV."""
     clients = []
-    
-    if category == 'all':
-        # Read all client lists from mapping
-        if os.path.exists(MAPPING_FILE):
-            with open(MAPPING_FILE, 'r', encoding='utf-8') as f:
-                reader = csv.reader(f)
-                for row in reader:
-                    if len(row) >= 2 and row[1].strip():
-                        filename = row[1].strip()
-                        file_path = os.path.join(CLIENTS_DIR, filename)
-                        
-                        if os.path.exists(file_path):
-                            category_name = row[0].strip()
-                            try:
-                                client_list = parse_client_list(file_path)
-                                for mac, name in client_list:
-                                    clients.append({
-                                        'mac': mac,
-                                        'name': name,
-                                        'category': category_name
-                                    })
-                            except Exception as e:
-                                logger.error(f"Error parsing {file_path}: {e}")
-    else:
-        # Read specific category
-        if os.path.exists(MAPPING_FILE):
-            with open(MAPPING_FILE, 'r', encoding='utf-8') as f:
-                reader = csv.reader(f)
-                for row in reader:
-                    if len(row) >= 2 and row[0].strip() == category:
-                        filename = row[1].strip()
-                        file_path = os.path.join(CLIENTS_DIR, filename)
-                        
-                        if os.path.exists(file_path):
-                            try:
-                                client_list = parse_client_list(file_path)
-                                for mac, name in client_list:
-                                    clients.append({
-                                        'mac': mac,
-                                        'name': name,
-                                        'category': category
-                                    })
-                            except Exception as e:
-                                logger.error(f"Error parsing {file_path}: {e}")
-    
+    cfg = _load_config_yaml()
+    if cfg and isinstance(cfg.get('mapping'), dict):
+        mapping_dict = cfg['mapping']
+        for cat_name, client_entries in mapping_dict.items():
+            if not cat_name or not isinstance(client_entries, list):
+                continue
+            if category != 'all' and cat_name != category:
+                continue
+            for entry in client_entries:
+                if not isinstance(entry, dict):
+                    continue
+                mac_raw = entry.get('mac') or entry.get('MAC_ADDRESS')
+                name = (entry.get('name') or entry.get('CLIENT_NAME') or 'Unknown').strip()
+                if not mac_raw:
+                    continue
+                mac = normalize_mac(str(mac_raw).strip())
+                if mac and len(mac.split(':')) == 6:
+                    clients.append({'mac': mac, 'name': name, 'category': cat_name})
+        if clients:
+            return clients
+    if os.path.exists(MAPPING_FILE):
+        with open(MAPPING_FILE, 'r', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            for row in reader:
+                if len(row) < 2 or not row[1].strip():
+                    continue
+                category_name = row[0].strip()
+                if category != 'all' and category_name != category:
+                    continue
+                filename = row[1].strip()
+                file_path = os.path.join(CLIENTS_DIR, filename)
+                if not os.path.exists(file_path):
+                    continue
+                try:
+                    client_list = parse_client_list(file_path)
+                    for mac, name in client_list:
+                        clients.append({'mac': mac, 'name': name, 'category': category_name})
+                except Exception as e:
+                    logger.error(f"Error parsing {file_path}: {e}")
     return clients
 
 
@@ -747,28 +775,28 @@ def unblock_clients():
 
 
 def _load_services() -> List[str]:
-    """Load available services from services.yml file."""
+    """Load available services from config.yaml or services.yml."""
     services = []
-    if not os.path.exists(SERVICES_FILE):
-        logger.warning(f"Services file not found: {SERVICES_FILE}")
-        return services
-    
-    try:
-        with open(SERVICES_FILE, 'r', encoding='utf-8') as f:
-            data = yaml.safe_load(f)
-            if data and 'services' in data:
-                services = data['services']
-                if isinstance(services, list):
-                    logger.info(f"Loaded {len(services)} services from {SERVICES_FILE}")
-                    return services
-                else:
-                    logger.error(f"Services in {SERVICES_FILE} is not a list: {type(services)}")
-            else:
-                logger.error(f"No 'services' key found in {SERVICES_FILE}")
-    except yaml.YAMLError as e:
-        logger.error(f"YAML parsing error in {SERVICES_FILE}: {e}")
-    except Exception as e:
-        logger.error(f"Error loading services.yml: {e}", exc_info=True)
+    cfg = _load_config_yaml()
+    if cfg and isinstance(cfg.get('services'), list):
+        services = [str(s).strip() for s in cfg['services'] if s]
+        if services:
+            logger.info(f"Loaded {len(services)} services from {CONFIG_YAML}")
+            return services
+    if os.path.exists(SERVICES_FILE):
+        try:
+            with open(SERVICES_FILE, 'r', encoding='utf-8') as f:
+                data = yaml.safe_load(f)
+                if data and 'services' in data:
+                    svc = data['services']
+                    if isinstance(svc, list):
+                        services = [str(s).strip() for s in svc if s]
+                        logger.info(f"Loaded {len(services)} services from {SERVICES_FILE}")
+                        return services
+        except yaml.YAMLError as e:
+            logger.error(f"YAML parsing error in {SERVICES_FILE}: {e}")
+        except Exception as e:
+            logger.error(f"Error loading services.yml: {e}", exc_info=True)
     return services
 
 
@@ -1136,10 +1164,15 @@ def unblock_service():
 
 
 if __name__ == '__main__':
-    # Create config directories if they don't exist (for development)
-    os.makedirs(CONFIG_DIR, exist_ok=True)
-    os.makedirs(CLIENTS_DIR, exist_ok=True)
-    
+    # Create config directories if they don't exist (for development). Skip when config is read-only (e.g. Docker :ro).
+    try:
+        os.makedirs(CONFIG_DIR, exist_ok=True)
+        os.makedirs(CLIENTS_DIR, exist_ok=True)
+    except OSError as e:
+        if e.errno != 30:  # 30 = read-only file system
+            raise
+        logger.info("Config directory is read-only; using config.yaml only (clients in config, not clients/)")
+
     # Log startup info
     routers = get_routers_from_env()
     logger.info(f"Starting GL.iNet Client Block Web UI")
