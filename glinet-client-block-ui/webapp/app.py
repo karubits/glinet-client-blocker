@@ -9,6 +9,8 @@ import os
 import sys
 import csv
 import logging
+import time
+import threading
 import yaml
 from datetime import timedelta
 from functools import wraps
@@ -43,6 +45,32 @@ app.secret_key = os.environ.get('SECRET_KEY', 'change-this-secret-key-in-product
 
 # Session configuration - 4 hours
 app.permanent_session_lifetime = timedelta(hours=4)
+
+# Active timed YouTube enables: {router_host: {'timer': threading.Timer, 'expires_at': float}}
+youtube_timers: Dict[str, Dict] = {}
+
+
+def _reblock_youtube_on_router(router_host: str, password: str, router_name: str) -> None:
+    """Timer callback: re-block YouTube on a router after a temporary enable."""
+    youtube_timers.pop(router_host, None)
+    logger.info(f"YouTube timer expired: re-blocking on {router_name} ({router_host})")
+    try:
+        adguard, err = get_adguard_client(router_host, password, router_name)
+        if err or not adguard:
+            logger.error(f"YouTube timer: AdGuard connect failed on {router_name}: {err}")
+            return
+        try:
+            current = adguard.get_blocked_services()
+            if current is None:
+                logger.error(f"YouTube timer: failed to get blocked services on {router_name}")
+                return
+            new_ids = list(set(current.get('ids', [])) | {'youtube'})
+            adguard.update_blocked_services(new_ids, current.get('schedule'))
+            logger.info(f"YouTube timer: re-blocked on {router_name}")
+        finally:
+            adguard.logout()
+    except Exception as e:
+        logger.error(f"YouTube timer: error on {router_name}: {e}", exc_info=True)
 
 # Configuration - use config directory for mounted volumes
 # Default to /config (when mounted) or fallback to local data directory for development
@@ -988,6 +1016,11 @@ def block_service():
                     schedule = current.get('schedule')
                     
                     if adguard.update_blocked_services(new_ids, schedule):
+                        # Cancel any timed YouTube enable when manually blocking
+                        if 'youtube' in service_ids and router_host in youtube_timers:
+                            youtube_timers[router_host]['timer'].cancel()
+                            youtube_timers.pop(router_host, None)
+                            logger.info(f"Cancelled YouTube timer for {router_name} (manual block)")
                         results.append({
                             'router': router_host,
                             'router_name': router_name,
@@ -1004,7 +1037,7 @@ def block_service():
                         })
                 finally:
                     adguard.logout()
-                    
+
             except requests.exceptions.Timeout:
                 logger.error(f"Timeout connecting to AdGuard Home on {router_name} ({router_host})")
                 results.append({
@@ -1029,7 +1062,7 @@ def block_service():
                     'success': False,
                     'error': str(e)
                 })
-        
+
         router_names = [r.get('router_name', r.get('router', 'Unknown')) for r in results if r.get('success')]
         logger.info(f"Block service operation complete on {', '.join(router_names) if router_names else 'no routers'}")
         
@@ -1107,6 +1140,11 @@ def unblock_service():
                     schedule = current.get('schedule')
                     
                     if adguard.update_blocked_services(new_ids, schedule):
+                        # Cancel any timed YouTube enable when manually enabling permanently
+                        if 'youtube' in service_ids and router_host in youtube_timers:
+                            youtube_timers[router_host]['timer'].cancel()
+                            youtube_timers.pop(router_host, None)
+                            logger.info(f"Cancelled YouTube timer for {router_name} (manual permanent enable)")
                         results.append({
                             'router': router_host,
                             'router_name': router_name,
@@ -1160,6 +1198,89 @@ def unblock_service():
     except Exception as e:
         logger.error(f"Error unblocking services: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/services/youtube-timer', methods=['POST'])
+@login_required
+def youtube_timer_enable():
+    """Temporarily enable YouTube for the given number of minutes, then re-block."""
+    data = request.get_json()
+    minutes = data.get('minutes')
+    if minutes not in (30, 60):
+        return jsonify({'error': 'minutes must be 30 or 60'}), 400
+
+    router_selection = data.get('router', 'all')
+
+    try:
+        all_routers = get_routers_from_env()
+        if not all_routers:
+            return jsonify({'error': 'No routers configured'}), 400
+
+        if router_selection == 'all':
+            routers = all_routers
+        else:
+            routers = [r for r in all_routers if r[0] == router_selection or r[2] == router_selection]
+            if not routers:
+                return jsonify({'error': f'Router "{router_selection}" not found'}), 400
+
+        delay = minutes * 60
+        expires_at = time.time() + delay
+        results = []
+
+        for router_host, password, router_name in routers:
+            try:
+                adguard, err = get_adguard_client(router_host, password, router_name)
+                if err or not adguard:
+                    results.append({'router': router_host, 'router_name': router_name, 'success': False, 'error': err or 'Authentication failed'})
+                    continue
+                try:
+                    current = adguard.get_blocked_services()
+                    if current is None:
+                        results.append({'router': router_host, 'router_name': router_name, 'success': False, 'error': 'Failed to get current blocked services'})
+                        continue
+                    new_ids = [sid for sid in current.get('ids', []) if sid != 'youtube']
+                    if adguard.update_blocked_services(new_ids, current.get('schedule')):
+                        # Cancel any existing timer before starting a new one
+                        if router_host in youtube_timers:
+                            youtube_timers[router_host]['timer'].cancel()
+                        timer = threading.Timer(delay, _reblock_youtube_on_router, args=[router_host, password, router_name])
+                        timer.daemon = True
+                        timer.start()
+                        youtube_timers[router_host] = {'timer': timer, 'expires_at': expires_at}
+                        results.append({'router': router_host, 'router_name': router_name, 'success': True, 'expires_at': expires_at})
+                        logger.info(f"YouTube enabled for {minutes}m on {router_name}, timer set")
+                    else:
+                        results.append({'router': router_host, 'router_name': router_name, 'success': False, 'error': 'Failed to update blocked services'})
+                finally:
+                    adguard.logout()
+            except requests.exceptions.Timeout:
+                results.append({'router': router_host, 'router_name': router_name, 'success': False, 'error': 'Request timed out'})
+            except requests.exceptions.ConnectionError:
+                results.append({'router': router_host, 'router_name': router_name, 'success': False, 'error': 'Router unreachable'})
+            except Exception as e:
+                logger.error(f"Error in youtube_timer_enable on {router_name}: {e}", exc_info=True)
+                results.append({'router': router_host, 'router_name': router_name, 'success': False, 'error': str(e)})
+
+        return jsonify({'results': results})
+
+    except Exception as e:
+        logger.error(f"Error in youtube_timer_enable: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/services/youtube-timer/status', methods=['GET'])
+@login_required
+def youtube_timer_status():
+    """Return active YouTube timers with seconds remaining."""
+    now = time.time()
+    timers = {}
+    for router_host, info in list(youtube_timers.items()):
+        remaining = max(0, info['expires_at'] - now)
+        timers[router_host] = {
+            'expires_at': info['expires_at'],
+            'remaining_seconds': int(remaining)
+        }
+    return jsonify({'timers': timers})
 
 
 if __name__ == '__main__':

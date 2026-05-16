@@ -77,10 +77,6 @@ The Web UI controls AdGuard Home on each router.
 **On GL.iNet (root + router password only):** The app uses the router proxy. It logs in to the router (root + router password), then calls **http://router/control/...** (nginx proxies to AdGuard on port 3000). No separate AdGuard password is needed.
 
 - **Default:** Router proxy (root + router password). No extra env vars.
-- **Optional:** To use the direct AdGuard API (host:3000), set an admin user/password in AdGuard and set `ADGUARD_PASSWORD` (and optionally `ADGUARD_USERNAME`) in the app.
-
-## Notes
-
-- `config.yaml` contains credentials and is ignored by git.
+- **Optional:** To use the direct AdGuard API (host:3000), set an admin user/password in AdGuard and set `ADGUARD_PASSWORD` (and optionally `ADGUARD_USERNAME`) in the app.## Notes- `config.yaml` contains credentials and is ignored by git.
 - `config.example.yaml` is a template and is tracked in git.
 - The config directory is typically mounted read-only in the container.

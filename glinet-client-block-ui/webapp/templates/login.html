@@ -1,12 +1,125 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja" id="html-root">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GL.iNet Client Block - Login</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
+        @font-face {
+            font-family: 'Noto Sans JP';
+            src: url('/static/fonts/NotoSansJP-VariableFont_wght.ttf') format('truetype');
+            font-weight: 100 900;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        :root {
+            --bg-page-start: #f5f7fa;
+            --bg-page-end: #c3cfe2;
+            --bg-card: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666;
+            --text-label: #333;
+            --input-bg: #f8f9fa;
+            --input-border: #e9ecef;
+            --input-color: #1a1a1a;
+            --input-placeholder: #999;
+            --card-shadow: rgba(0, 0, 0, 0.1);
+            --lang-bg: #f8f9fa;
+            --lang-border: #e9ecef;
+            --lang-color: #333;
+            --alert-success-bg: #d4edda;
+            --alert-success-border: #c3e6cb;
+            --alert-success-color: #155724;
+            --alert-error-bg: #f8d7da;
+            --alert-error-border: #f5c6cb;
+            --alert-error-color: #721c24;
+            --alert-info-bg: #d1ecf1;
+            --alert-info-border: #bee5eb;
+            --alert-info-color: #0c5460;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-page-start: #0f1419;
+                --bg-page-end: #1a1f2e;
+                --bg-card: #1a1f2e;
+                --text-primary: #e4e7eb;
+                --text-secondary: #9ca3af;
+                --text-label: #c9d1d9;
+                --input-bg: #252b3b;
+                --input-border: #374151;
+                --input-color: #e4e7eb;
+                --input-placeholder: #6b7280;
+                --card-shadow: rgba(0, 0, 0, 0.4);
+                --lang-bg: #252b3b;
+                --lang-border: #374151;
+                --lang-color: #e4e7eb;
+                --alert-success-bg: #1e3a2a;
+                --alert-success-border: #2d5a3d;
+                --alert-success-color: #86efac;
+                --alert-error-bg: #3a1e1e;
+                --alert-error-border: #5a2d2d;
+                --alert-error-color: #fca5a5;
+                --alert-info-bg: #1e2d3a;
+                --alert-info-border: #2d4a5a;
+                --alert-info-color: #93c5fd;
+            }
+        }
+
+        :root[data-theme="light"] {
+            --bg-page-start: #f5f7fa;
+            --bg-page-end: #c3cfe2;
+            --bg-card: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666;
+            --text-label: #333;
+            --input-bg: #f8f9fa;
+            --input-border: #e9ecef;
+            --input-color: #1a1a1a;
+            --input-placeholder: #999;
+            --card-shadow: rgba(0, 0, 0, 0.1);
+            --lang-bg: #f8f9fa;
+            --lang-border: #e9ecef;
+            --lang-color: #333;
+            --alert-success-bg: #d4edda;
+            --alert-success-border: #c3e6cb;
+            --alert-success-color: #155724;
+            --alert-error-bg: #f8d7da;
+            --alert-error-border: #f5c6cb;
+            --alert-error-color: #721c24;
+            --alert-info-bg: #d1ecf1;
+            --alert-info-border: #bee5eb;
+            --alert-info-color: #0c5460;
+        }
+
+        :root[data-theme="dark"] {
+            --bg-page-start: #0f1419;
+            --bg-page-end: #1a1f2e;
+            --bg-card: #1a1f2e;
+            --text-primary: #e4e7eb;
+            --text-secondary: #9ca3af;
+            --text-label: #c9d1d9;
+            --input-bg: #252b3b;
+            --input-border: #374151;
+            --input-color: #e4e7eb;
+            --input-placeholder: #6b7280;
+            --card-shadow: rgba(0, 0, 0, 0.4);
+            --lang-bg: #252b3b;
+            --lang-border: #374151;
+            --lang-color: #e4e7eb;
+            --alert-success-bg: #1e3a2a;
+            --alert-success-border: #2d5a3d;
+            --alert-success-color: #86efac;
+            --alert-error-bg: #3a1e1e;
+            --alert-error-border: #5a2d2d;
+            --alert-error-color: #fca5a5;
+            --alert-info-bg: #1e2d3a;
+            --alert-info-border: #2d4a5a;
+            --alert-info-color: #93c5fd;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -15,21 +128,68 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background: linear-gradient(135deg, var(--bg-page-start) 0%, var(--bg-page-end) 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 2rem;
+            color: var(--text-primary);
+        }
+
+        html[lang="ja"] body,
+        html[lang="ja"] * {
+            font-family: 'Noto Sans JP', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        .login-wrapper {
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .lang-bar {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 0.75rem;
+        }
+
+        .lang-bar-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: var(--lang-bg);
+            border: 1px solid var(--lang-border);
+            border-radius: 6px;
+            padding: 0 0.25rem 0 0.5rem;
+        }
+
+        .lang-bar-wrapper .lang-globe {
+            font-size: 0.95rem;
+            line-height: 1;
+        }
+
+        .lang-bar-wrapper select {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--lang-color);
+            font-size: 0.85rem;
+            font-family: inherit;
+            cursor: pointer;
+            padding: 0.375rem 0.375rem 0.375rem 0;
+        }
+
+        .lang-bar-wrapper select option {
+            background: var(--bg-card);
+            color: var(--text-primary);
         }
 
         .login-container {
-            background: #ffffff;
+            background: var(--bg-card);
             border-radius: 16px;
             padding: 3rem;
             width: 100%;
-            max-width: 420px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 40px var(--card-shadow);
         }
 
         .logo {
@@ -40,13 +200,13 @@
         .logo h1 {
             font-size: 2rem;
             font-weight: 700;
-            color: #1a1a1a;
+            color: var(--text-primary);
             margin-bottom: 0.5rem;
             letter-spacing: -0.5px;
         }
 
         .logo p {
-            color: #666;
+            color: var(--text-secondary);
             font-size: 0.95rem;
         }
 
@@ -56,7 +216,7 @@
 
         .form-group label {
             display: block;
-            color: #333;
+            color: var(--text-label);
             margin-bottom: 0.5rem;
             font-weight: 500;
             font-size: 0.9rem;
@@ -65,10 +225,10 @@
         .form-group input {
             width: 100%;
             padding: 0.875rem 1rem;
-            background: #f8f9fa;
-            border: 2px solid #e9ecef;
+            background: var(--input-bg);
+            border: 2px solid var(--input-border);
             border-radius: 8px;
-            color: #1a1a1a;
+            color: var(--input-color);
             font-size: 1rem;
             transition: all 0.2s ease;
         }
@@ -76,12 +236,12 @@
         .form-group input:focus {
             outline: none;
             border-color: #ff1493;
-            background: #ffffff;
+            background: var(--bg-card);
             box-shadow: 0 0 0 3px rgba(255, 20, 147, 0.1);
         }
 
         .form-group input::placeholder {
-            color: #999;
+            color: var(--input-placeholder);
         }
 
         .btn {
@@ -116,50 +276,136 @@
         }
 
         .alert-success {
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
+            background: var(--alert-success-bg);
+            border: 1px solid var(--alert-success-border);
+            color: var(--alert-success-color);
         }
 
         .alert-error {
-            background: #f8d7da;
-            border: 1px solid #f5c6cb;
-            color: #721c24;
+            background: var(--alert-error-bg);
+            border: 1px solid var(--alert-error-border);
+            color: var(--alert-error-color);
         }
 
         .alert-info {
-            background: #d1ecf1;
-            border: 1px solid #bee5eb;
-            color: #0c5460;
+            background: var(--alert-info-bg);
+            border: 1px solid var(--alert-info-border);
+            color: var(--alert-info-color);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 1rem;
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            opacity: 0.7;
+        }
+
+        .spinning-kitten {
+            font-size: 3rem;
+            display: inline-block;
+            animation: spin-kitten 2s linear infinite;
+            margin-bottom: 0.75rem;
+            cursor: default;
+            user-select: none;
+        }
+
+        @keyframes spin-kitten {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <div class="logo">
-            <h1>GL.iNet</h1>
-            <p>Client Block Control</p>
+    <div class="login-wrapper">
+        <div class="lang-bar">
+            <div class="lang-bar-wrapper">
+                <span class="lang-globe">🌐</span>
+                <select id="language-select" onchange="changeLanguage()">
+                    <option value="en">English</option>
+                    <option value="ja">日本語</option>
+                </select>
+            </div>
         </div>
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
-        <form method="POST" action="{{ url_for('login') }}">
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" placeholder="Enter password" required autofocus>
+        <div class="login-container">
+            <div class="logo">
+                <div class="spinning-kitten">🐱</div>
+                <h1>GL.iNet</h1>
+                <p data-i18n="subtitle">クライアントブロック制御</p>
             </div>
 
-            <button type="submit" class="btn">Login</button>
-        </form>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST" action="{{ url_for('login') }}">
+                <div class="form-group">
+                    <label for="password" data-i18n="password-label">パスワード</label>
+                    <input type="password" id="password" name="password"
+                           data-i18n-placeholder="password-placeholder"
+                           placeholder="パスワードを入力" required autofocus>
+                </div>
+
+                <button type="submit" class="btn" data-i18n="login-btn">ログイン</button>
+            </form>
+        </div>
+
+        <p class="footer">Created by Karubits &mdash; Version 1.8 &mdash; 2026-05-16</p>
     </div>
+
+    <script>
+        const translations = {
+            en: {
+                'subtitle': '🌐 Client Block Control',
+                'password-label': '🔑 Password',
+                'password-placeholder': 'Enter password',
+                'login-btn': 'Login'
+            },
+            ja: {
+                'subtitle': '🌐 クライアントブロック制御',
+                'password-label': '🔑 パスワード',
+                'password-placeholder': 'パスワードを入力',
+                'login-btn': 'ログイン'
+            }
+        };
+
+        function applyTheme() {
+            const saved = localStorage.getItem('theme');
+            if (saved) {
+                document.documentElement.setAttribute('data-theme', saved);
+            }
+            // No saved theme: CSS @media (prefers-color-scheme: dark) handles it
+        }
+
+        function applyLanguage(lang) {
+            const dict = translations[lang] || translations['en'];
+            document.documentElement.setAttribute('lang', lang);
+            document.getElementById('language-select').value = lang;
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (dict[key] !== undefined) el.textContent = dict[key];
+            });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (dict[key] !== undefined) el.placeholder = dict[key];
+            });
+        }
+
+        function changeLanguage() {
+            const lang = document.getElementById('language-select').value;
+            localStorage.setItem('language', lang);
+            applyLanguage(lang);
+        }
+
+        applyTheme();
+        applyLanguage(localStorage.getItem('language') || 'ja');
+    </script>
 </body>
 </html>
-

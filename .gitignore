@@ -68,3 +68,4 @@ glinet-client-block-ui/data/mapping.csv
 
 # Docker
 .docker/
+.claude/settings.local.json

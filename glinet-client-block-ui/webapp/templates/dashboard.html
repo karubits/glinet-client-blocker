@@ -15,7 +15,7 @@
             font-display: swap;
         }
         :root {
-            /* Light theme (default) */
+            /* Light theme */
             --bg-primary: #f5f7fa;
             --bg-secondary: #ffffff;
             --bg-tertiary: #f8f9fa;
@@ -26,6 +26,7 @@
             --shadow-hover: rgba(0, 0, 0, 0.12);
             --accent: #ff1493;
             --accent-hover: #e01185;
+            --accent-soft: rgba(255, 20, 147, 0.08);
         }
 
         [data-theme="dark"] {
@@ -40,6 +41,7 @@
             --shadow-hover: rgba(0, 0, 0, 0.5);
             --accent: #ff1493;
             --accent-hover: #e01185;
+            --accent-soft: rgba(255, 20, 147, 0.1);
         }
 
         * {
@@ -408,9 +410,12 @@
         }
 
         .loading {
-            text-align: center;
             padding: 3rem;
             color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
         }
 
         /* Toast Notification System */
@@ -536,11 +541,10 @@
             border: 3px solid var(--border-color);
             border-top: 3px solid var(--accent);
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
+            width: 36px;
+            height: 36px;
             animation: spin 1s linear infinite;
-            display: inline-block;
-            margin-right: 1rem;
+            display: block;
         }
 
         @keyframes spin {
@@ -738,27 +742,9 @@
             color: #dc3545;
         }
 
-        .youtube-status-light.blocked::before {
-            content: '';
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #dc3545;
-            box-shadow: 0 0 6px rgba(220, 53, 69, 0.5);
-        }
-
         .youtube-status-light.enabled {
             background: rgba(40, 167, 69, 0.15);
             color: #28a745;
-        }
-
-        .youtube-status-light.enabled::before {
-            content: '';
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #28a745;
-            box-shadow: 0 0 6px rgba(40, 167, 69, 0.5);
         }
 
         .youtube-status-light.unknown {
@@ -766,16 +752,29 @@
             color: var(--text-secondary);
         }
 
-        .youtube-status-light.unknown::before {
-            content: '';
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--text-secondary);
+        .youtube-status-light.timer {
+            background: rgba(255, 20, 147, 0.15);
+            color: #ff1493;
+        }
+
+        .btn-timer {
+            background: var(--accent);
+            color: #ffffff;
+            padding: 0.4rem 0.7rem;
+            font-size: 0.82rem;
+        }
+
+        .btn-timer:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 4px 12px rgba(255, 20, 147, 0.3);
         }
 
         .youtube-router-action {
             flex-shrink: 0;
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
         }
 
         .controls {
@@ -793,6 +792,32 @@
             font-size: 0.9rem;
             font-family: inherit;
             cursor: pointer;
+        }
+
+        .lang-select-wrapper {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0 0.25rem 0 0.5rem;
+        }
+
+        .lang-select-wrapper select {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-family: inherit;
+            cursor: pointer;
+            padding: 0.5rem 0.5rem 0.5rem 0;
+        }
+
+        .lang-select-wrapper select option {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
         }
 
         /* Mobile Responsive Styles */
@@ -1043,6 +1068,112 @@
                 left: 5px !important;
             }
         }
+        /* ---- Pink accent bar on section headings ---- */
+        .service-block-title,
+        .client-block-control-title {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+        }
+
+        .service-block-title::before,
+        .client-block-control-title::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 1.25em;
+            background: var(--accent);
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        /* ---- Header pink bottom rule ---- */
+        .header {
+            border-bottom: 2px solid var(--accent);
+        }
+
+        /* ---- Services side-by-side grid ---- */
+        .services-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .services-row .service-block-section {
+            margin-bottom: 0;
+        }
+
+        /* ---- Consistent pink focus ring on selects ---- */
+        .router-selector select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-soft);
+        }
+
+        /* ---- Pink hover on interactive cards ---- */
+        .client-block-control-box:hover,
+        .service-block-section:hover,
+        .category-card:hover,
+        .all-clients-section:hover {
+            border-color: var(--accent);
+        }
+
+        /* ---- Client items – pink hover ---- */
+        .client-item:hover {
+            border-color: var(--accent);
+            box-shadow: 0 2px 8px var(--accent-soft);
+        }
+
+        /* ---- btn-primary uses accent pink ---- */
+        .btn-primary {
+            background: var(--accent);
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 4px 12px rgba(255, 20, 147, 0.3);
+        }
+
+        /* ---- btn-icon pink on hover ---- */
+        .btn-icon:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--accent-soft);
+        }
+
+        /* ---- btn-timer uses accent pink ---- */
+        .btn-timer {
+            background: var(--accent);
+            color: #ffffff;
+            padding: 0.4rem 0.7rem;
+            font-size: 0.82rem;
+        }
+
+        .btn-timer:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 4px 12px rgba(255, 20, 147, 0.3);
+        }
+
+        /* ---- Expand toggle pink when active ---- */
+        .expand-toggle.expanded {
+            color: var(--accent);
+        }
+
+        @media (max-width: 768px) {
+            .services-row {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+        }
+
+        .footer {
+            text-align: center;
+            padding: 1.5rem 0 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            opacity: 0.6;
+        }
     </style>
 </head>
 <body>
@@ -1054,13 +1185,16 @@
                     <button class="btn btn-icon" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
                         <span class="material-icons" id="theme-icon">light_mode</span>
                     </button>
-                    <select id="language-select" onchange="changeLanguage()">
-                        <option value="en">English</option>
-                        <option value="ja">日本語</option>
-                    </select>
+                    <div class="lang-select-wrapper">
+                        <span class="material-icons" style="font-size: 18px; color: var(--text-secondary);">language</span>
+                        <select id="language-select" onchange="changeLanguage()">
+                            <option value="en">English</option>
+                            <option value="ja">日本語</option>
+                        </select>
+                    </div>
                 </div>
                 <a href="{{ url_for('logout') }}" class="btn btn-secondary" data-i18n="logout">
-                    <span class="material-icons" style="font-size: 18px;">logout</span>
+                    <span class="material-icons" style="font-size: 18px;">door_back</span>
                     <span data-i18n="logout-text">Logout</span>
                 </a>
             </div>
@@ -1074,17 +1208,19 @@
         </div>
 
         <div id="content" class="hidden">
-            <!-- Explanation Section -->
-            <div class="explanation">
-                <h2 data-i18n="explanation-title">About This Page</h2>
-                <p data-i18n="explanation-text">This dashboard allows you to block or unblock internet access for specific devices (clients) on your GL.iNet routers. You can manage clients by category or block/unblock all clients at once.</p>
-                <p data-i18n="explanation-how"><strong>How it works:</strong></p>
-                <ul>
-                    <li data-i18n="explanation-1">Select a router from the dropdown above (or choose "All Routers" to affect all routers)</li>
-                    <li data-i18n="explanation-2">Click "Block All" or "Unblock All" to manage all clients at once</li>
-                    <li data-i18n="explanation-3">Or use the category-specific buttons to block/unblock clients in specific categories (e.g., Gaming Devices, TV Devices)</li>
-                    <li data-i18n="explanation-4">Changes are applied immediately to the selected router(s)</li>
-                </ul>
+            <!-- Service Block Sections (YouTube + Roblox side by side) -->
+            <div class="services-row">
+                <div class="service-block-section youtube-block-section">
+                    <h2 class="service-block-title" data-i18n="youtube-block-title">YouTube Block</h2>
+                    <p class="service-block-description" data-i18n="youtube-block-description">Block or allow YouTube per router using AdGuard Home.</p>
+                    <div id="youtube-router-list" class="youtube-router-list"></div>
+                </div>
+
+                <div class="service-block-section roblox-block-section">
+                    <h2 class="service-block-title" data-i18n="roblox-block-title">Roblox Block</h2>
+                    <p class="service-block-description" data-i18n="roblox-block-description">Block or allow Roblox per router using AdGuard Home.</p>
+                    <div id="roblox-router-list" class="youtube-router-list"></div>
+                </div>
             </div>
 
             <!-- Client Block Control box -->
@@ -1100,59 +1236,46 @@
 
                 <!-- All Clients Section -->
                 <div class="all-clients-section">
-                <div class="all-clients-header">
-                    <div class="category-header-row" style="width: 100%;">
-                        <div class="category-header-left">
-                            <div class="expandable-header" onclick="toggleExpand('all-clients')" aria-expanded="false" id="all-clients-toggle">
-                                <span class="expand-toggle" id="all-clients-arrow" aria-hidden="true"><span class="material-icons">expand_more</span></span>
-                                <div class="all-clients-title" data-i18n="all-clients">All Clients</div>
+                    <div class="all-clients-header">
+                        <div class="category-header-row" style="width: 100%;">
+                            <div class="category-header-left">
+                                <div class="expandable-header" onclick="toggleExpand('all-clients')" aria-expanded="false" id="all-clients-toggle">
+                                    <span class="expand-toggle" id="all-clients-arrow" aria-hidden="true"><span class="material-icons">expand_more</span></span>
+                                    <div class="all-clients-title" data-i18n="all-clients">All Clients</div>
+                                </div>
+                            </div>
+                            <div class="category-actions" onclick="event.stopPropagation();">
+                                <button class="btn btn-block" onclick="blockAll()">
+                                    <span class="material-icons" style="font-size: 18px;">block</span>
+                                    <span data-i18n="block-all">Block All</span>
+                                </button>
+                                <button class="btn btn-unblock" onclick="unblockAll()">
+                                    <span class="material-icons" style="font-size: 18px;">check_circle</span>
+                                    <span data-i18n="unblock-all">Unblock All</span>
+                                </button>
                             </div>
                         </div>
-                        <div class="category-actions" onclick="event.stopPropagation();">
-                            <button class="btn btn-block" onclick="blockAll()">
-                                <span class="material-icons" style="font-size: 18px;">block</span>
-                                <span data-i18n="block-all">Block All</span>
-                            </button>
-                            <button class="btn btn-unblock" onclick="unblockAll()">
-                                <span class="material-icons" style="font-size: 18px;">check_circle</span>
-                                <span data-i18n="unblock-all">Unblock All</span>
-                            </button>
-                        </div>
+                    </div>
+                    <div id="all-clients-body" class="expandable-body collapsed">
+                        <div id="all-clients-list" class="clients-list"></div>
                     </div>
                 </div>
-                <div id="all-clients-body" class="expandable-body collapsed">
-                    <div id="all-clients-list" class="clients-list"></div>
-                </div>
-            </div>
 
                 <!-- Category Sections -->
                 <div id="categories"></div>
             </div>
-
-            <!-- YouTube Block Section -->
-            <div class="service-block-section youtube-block-section">
-                <h2 class="service-block-title" data-i18n="youtube-block-title">YouTube Block</h2>
-                <p class="service-block-description" data-i18n="youtube-block-description">Block or allow YouTube per router using AdGuard Home.</p>
-                <div id="youtube-router-list" class="youtube-router-list"></div>
-            </div>
-
-            <!-- Roblox Block Section -->
-            <div class="service-block-section roblox-block-section">
-                <h2 class="service-block-title" data-i18n="roblox-block-title">Roblox Block</h2>
-                <p class="service-block-description" data-i18n="roblox-block-description">Block or allow Roblox per router using AdGuard Home.</p>
-                <div id="roblox-router-list" class="youtube-router-list"></div>
-            </div>
         </div>
+        <p class="footer">Created by Karubits &mdash; Version 1.8 &mdash; 2026-05-16</p>
     </div>
 
     <script>
         // Translations
         const translations = {
             en: {
-                'title': 'Router Block Control',
+                'title': '🔒 Router Block Control',
                 'logout': 'Logout',
                 'logout-text': 'Logout',
-                'loading': 'Loading client lists...',
+                'loading': '⏳ Loading client lists...',
                 'explanation-title': 'About This Page',
                 'explanation-text': 'This dashboard allows you to block or unblock internet access for specific devices (clients) on your GL.iNet routers. You can manage clients by category or block/unblock all clients at once.',
                 'explanation-how': 'How it works:',
@@ -1162,7 +1285,7 @@
                 'explanation-4': 'Changes are applied immediately to the selected router(s)',
                 'router-select-label': 'Select Router:',
                 'all-routers': 'All Routers',
-                'all-clients': 'All Clients',
+                'all-clients': '👥 All Clients',
                 'block-all': 'Block All',
                 'unblock-all': 'Unblock All',
                 'block': 'Block',
@@ -1182,13 +1305,13 @@
                 'error': 'Error: {error}',
                 'service-block-title': 'Service Block Control',
                 'service-block-description': 'Block or allow internet services across the entire network using AdGuard Home.',
-                'client-block-control-title': 'Client Block Control',
-                'youtube-block-title': 'YouTube Block',
+                'client-block-control-title': '🖥️ Client Block Control',
+                'youtube-block-title': '▶️ YouTube Block',
                 'youtube-block-description': 'Block or allow YouTube per router using AdGuard Home.',
-                'roblox-block-title': 'Roblox Block',
+                'roblox-block-title': '🎮 Roblox Block',
                 'roblox-block-description': 'Block or allow Roblox per router using AdGuard Home.',
-                'status-blocked': 'Blocked',
-                'status-enabled': 'Enabled',
+                'status-blocked': '🔴 Blocked',
+                'status-enabled': '🟢 Enabled',
                 'block-youtube': 'Block',
                 'enable-youtube': 'Enable',
                 'block-roblox': 'Block',
@@ -1212,13 +1335,16 @@
                 'services-blocked-success': 'Services blocked on {routers}!',
                 'services-unblocked-success': 'Services unblocked on {routers}!',
                 'service-blocked-success': '{service} blocked on {routers}!',
-                'service-unblocked-success': '{service} unblocked on {routers}!'
+                'service-unblocked-success': '{service} unblocked on {routers}!',
+                'status-timer': '⏱️ Enabled ({time})',
+                'enabling-youtube-timer': 'Enabling YouTube for {minutes}m on {router}...',
+                'youtube-timer-success': 'YouTube enabled for {minutes}m on {routers}!'
             },
             ja: {
-                'title': 'ルーターブロック制御',
+                'title': '🔒 ルーターブロック制御',
                 'logout': 'ログアウト',
                 'logout-text': 'ログアウト',
-                'loading': 'クライアントリストを読み込み中...',
+                'loading': '⏳ クライアントリストを読み込み中...',
                 'explanation-title': 'このページについて',
                 'explanation-text': 'このダッシュボードでは、GL.iNetルーター上の特定のデバイス（クライアント）のインターネットアクセスをブロックまたはブロック解除できます。カテゴリ別にクライアントを管理するか、すべてのクライアントを一度にブロック/ブロック解除できます。',
                 'explanation-how': '使い方:',
@@ -1228,7 +1354,7 @@
                 'explanation-4': '変更は選択したルーターに即座に適用されます',
                 'router-select-label': 'ルーターを選択:',
                 'all-routers': 'すべてのルーター',
-                'all-clients': 'すべてのクライアント',
+                'all-clients': '👥 すべてのクライアント',
                 'block-all': 'すべてブロック',
                 'unblock-all': 'すべてブロック解除',
                 'block': 'ブロック',
@@ -1246,15 +1372,15 @@
                 'category-blocked': '{routers}で{category}をブロックしました！成功: {success}、失敗: {failed}',
                 'category-unblocked': '{routers}で{category}のブロックを解除しました！成功: {success}、失敗: {failed}',
                 'error': 'エラー: {error}',
-                'client-block-control-title': 'クライアントブロック制御',
+                'client-block-control-title': '🖥️ クライアントブロック制御',
                 'service-block-title': 'サービスブロック制御',
                 'service-block-description': 'AdGuard Homeを使用して、ネットワーク全体でインターネットサービスをブロックまたは許可します。',
-                'youtube-block-title': 'YouTubeブロック',
+                'youtube-block-title': '▶️ YouTubeブロック',
                 'youtube-block-description': 'AdGuard HomeでルーターごとにYouTubeをブロックまたは許可します。',
-                'roblox-block-title': 'Robloxブロック',
+                'roblox-block-title': '🎮 Robloxブロック',
                 'roblox-block-description': 'AdGuard HomeでルーターごとにRobloxをブロックまたは許可します。',
-                'status-blocked': 'ブロック済み',
-                'status-enabled': '許可中',
+                'status-blocked': '🔴 ブロック済み',
+                'status-enabled': '🟢 許可中',
                 'block-youtube': 'ブロック',
                 'enable-youtube': '許可',
                 'block-roblox': 'ブロック',
@@ -1278,7 +1404,10 @@
                 'services-blocked-success': '{routers}でサービスをブロックしました！',
                 'services-unblocked-success': '{routers}でサービスのブロックを解除しました！',
                 'service-blocked-success': '{routers}で{service}をブロックしました！',
-                'service-unblocked-success': '{routers}で{service}のブロックを解除しました！'
+                'service-unblocked-success': '{routers}で{service}のブロックを解除しました！',
+                'status-timer': '⏱️ 許可中({time})',
+                'enabling-youtube-timer': '{router}でYouTubeを{minutes}分間許可中...',
+                'youtube-timer-success': '{routers}でYouTubeを{minutes}分間許可しました！'
             }
         };
 
@@ -1295,6 +1424,8 @@
         let youtubeStatusByRouter = [];
         /** Per-router Roblox block status: { router, router_name, success, error?, robloxBlocked } */
         let robloxStatusByRouter = [];
+        /** Active YouTube timers from backend: { [router_host]: { expires_at, remaining_seconds } } */
+        let youtubeTimers = {};
 
         // Initialize theme and language
         function init() {
@@ -1303,7 +1434,7 @@
             setTheme(savedTheme);
             
             // Load language preference
-            const savedLang = localStorage.getItem('language') || 'en';
+            const savedLang = localStorage.getItem('language') || 'ja';
             setLanguage(savedLang);
         }
 
@@ -1411,13 +1542,17 @@
 
         async function loadYouTubeStatus() {
             try {
-                const res = await fetch('/api/services/status?router=all');
-                if (!res.ok) {
-                    console.error('Failed to load YouTube status:', res.status);
+                const [statusRes, timerRes] = await Promise.all([
+                    fetch('/api/services/status?router=all'),
+                    fetch('/api/services/youtube-timer/status')
+                ]);
+                if (!statusRes.ok) {
+                    console.error('Failed to load YouTube status:', statusRes.status);
                     youtubeStatusByRouter = [];
+                    youtubeTimers = {};
                     return;
                 }
-                const data = await res.json();
+                const data = await statusRes.json();
                 if (data.results && Array.isArray(data.results)) {
                     youtubeStatusByRouter = data.results.map(r => ({
                         router: r.router,
@@ -1438,10 +1573,12 @@
                 } else {
                     youtubeStatusByRouter = [];
                 }
+                youtubeTimers = timerRes.ok ? ((await timerRes.json()).timers || {}) : {};
             } catch (error) {
                 console.error('Error loading YouTube status:', error);
                 showAlert(t('error', { error: error.message }), 'error');
                 youtubeStatusByRouter = [];
+                youtubeTimers = {};
             }
         }
 
@@ -1489,12 +1626,46 @@
                 const status = youtubeStatusByRouter.find(r =>
                     r.router === router.host || r.router_name === (router.name || router.host)
                 );
+                const timerInfo = youtubeTimers[router.host];
+                const hasTimer = timerInfo && timerInfo.remaining_seconds > 0;
                 const success = status ? status.success : false;
                 const youtubeBlocked = status ? status.youtubeBlocked : false;
-                const statusClass = !success ? 'unknown' : (youtubeBlocked ? 'blocked' : 'enabled');
-                const statusLabel = !success
-                    ? (status && status.error ? status.error : '—')
-                    : (youtubeBlocked ? t('status-blocked') : t('status-enabled'));
+
+                let statusClass, statusLabel;
+                if (!success) {
+                    statusClass = 'unknown';
+                    statusLabel = status && status.error ? `⚠️ ${status.error}` : '⚠️ —';
+                } else if (youtubeBlocked) {
+                    statusClass = 'blocked';
+                    statusLabel = t('status-blocked');
+                } else if (hasTimer) {
+                    statusClass = 'timer';
+                    const mins = Math.ceil(timerInfo.remaining_seconds / 60);
+                    statusLabel = t('status-timer', { time: `${mins}m` });
+                } else {
+                    statusClass = 'enabled';
+                    statusLabel = t('status-enabled');
+                }
+
+                let actionButtons;
+                if (youtubeBlocked && success) {
+                    actionButtons = `
+                        <button class="btn btn-unblock" onclick="enableYouTube('${escapeHtml(router.host)}')">
+                            <span class="material-icons" style="font-size: 18px;">check_circle</span>
+                            <span>${t('enable-youtube')}</span>
+                        </button>
+                        <button class="btn btn-timer" onclick="enableYouTubeTimer('${escapeHtml(router.host)}', 30)">30m</button>
+                        <button class="btn btn-timer" onclick="enableYouTubeTimer('${escapeHtml(router.host)}', 60)">1hr</button>
+                    `;
+                } else {
+                    actionButtons = `
+                        <button class="btn btn-block" onclick="blockYouTube('${escapeHtml(router.host)}')">
+                            <span class="material-icons" style="font-size: 18px;">block</span>
+                            <span>${t('block-youtube')}</span>
+                        </button>
+                    `;
+                }
+
                 const row = document.createElement('div');
                 row.className = 'youtube-router-row' + (status && !status.success ? ' error' : '');
                 row.innerHTML = `
@@ -1503,10 +1674,7 @@
                         <span class="youtube-status-light ${statusClass}">${escapeHtml(statusLabel)}</span>
                     </div>
                     <div class="youtube-router-action">
-                        <button class="btn ${youtubeBlocked ? 'btn-unblock' : 'btn-block'}" onclick="${youtubeBlocked ? 'enableYouTube' : 'blockYouTube'}('${escapeHtml(router.host)}')">
-                            <span class="material-icons" style="font-size: 18px;">${youtubeBlocked ? 'check_circle' : 'block'}</span>
-                            <span>${youtubeBlocked ? t('enable-youtube') : t('block-youtube')}</span>
-                        </button>
+                        ${actionButtons}
                     </div>
                 `;
                 listEl.appendChild(row);
@@ -1528,7 +1696,7 @@
                 const robloxBlocked = status ? status.robloxBlocked : false;
                 const statusClass = !success ? 'unknown' : (robloxBlocked ? 'blocked' : 'enabled');
                 const statusLabel = !success
-                    ? (status && status.error ? status.error : '—')
+                    ? (status && status.error ? `⚠️ ${status.error}` : '⚠️ —')
                     : (robloxBlocked ? t('status-blocked') : t('status-enabled'));
                 const row = document.createElement('div');
                 row.className = 'youtube-router-row' + (status && !status.success ? ' error' : '');
@@ -1587,6 +1755,32 @@
                     const result = data.results && data.results.find(r => r.router === routerHost || r.router_name === routerHost);
                     if (result && result.success) {
                         showAlert(t('service-unblocked-success', { service: 'YouTube', routers: result.router_name || routerHost }), 'success');
+                    } else if (result && !result.success) {
+                        showAlert(`${result.router_name || routerHost}: ${result.error || 'Failed'}`, 'error');
+                    }
+                    await loadYouTubeStatus();
+                    renderYouTubeSection();
+                } else {
+                    showAlert(t('error', { error: data.error || 'Unknown error' }), 'error');
+                }
+            } catch (error) {
+                showAlert(t('error', { error: error.message }), 'error');
+            }
+        }
+
+        async function enableYouTubeTimer(routerHost, minutes) {
+            try {
+                showAlert(t('enabling-youtube-timer', { minutes, router: getRouterName(routerHost) }), 'info');
+                const res = await fetch('/api/services/youtube-timer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ minutes, router: routerHost })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    const result = data.results && data.results.find(r => r.router === routerHost || r.router_name === routerHost);
+                    if (result && result.success) {
+                        showAlert(t('youtube-timer-success', { minutes, routers: result.router_name || routerHost }), 'success');
                     } else if (result && !result.success) {
                         showAlert(`${result.router_name || routerHost}: ${result.error || 'Failed'}`, 'error');
                     }
@@ -2027,6 +2221,15 @@
             div.textContent = text;
             return div.innerHTML;
         }
+
+        // Poll every 30s to reflect timer expiry when a timed YouTube enable is active
+        setInterval(async () => {
+            const hasActive = Object.values(youtubeTimers).some(t => t.remaining_seconds > 0);
+            if (hasActive) {
+                await loadYouTubeStatus();
+                renderYouTubeSection();
+            }
+        }, 30000);
 
         // Initialize on page load
         init();
