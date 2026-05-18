@@ -19,6 +19,7 @@ from typing import List, Dict, Tuple, Optional
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 from werkzeug.security import check_password_hash, generate_password_hash
 import requests
+from authlib.integrations.flask_client import OAuth
 
 # Import glinet_block from same directory
 from glinet_block import (
@@ -100,6 +101,29 @@ PASSWORD_HASH = os.environ.get('WEBUI_PASSWORD_HASH')
 if not PASSWORD_HASH:
     # Generate hash from plain password if hash not provided
     PASSWORD_HASH = generate_password_hash(DEFAULT_PASSWORD)
+
+# OIDC configuration (works with Authentik and any OpenID Connect provider)
+OIDC_ENABLED = os.environ.get('OIDC_ENABLED', 'false').lower() in ('true', '1', 'yes')
+OIDC_CLIENT_ID = os.environ.get('OIDC_CLIENT_ID', '')
+OIDC_CLIENT_SECRET = os.environ.get('OIDC_CLIENT_SECRET', '')
+# Full discovery URL, e.g. https://auth.example.com/application/o/<slug>/.well-known/openid-configuration
+OIDC_DISCOVERY_URL = os.environ.get('OIDC_DISCOVERY_URL', '')
+
+oauth = None
+if OIDC_ENABLED:
+    if not all([OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, OIDC_DISCOVERY_URL]):
+        logger.warning("OIDC_ENABLED=true but OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, or OIDC_DISCOVERY_URL is missing — OIDC disabled")
+        OIDC_ENABLED = False
+    else:
+        oauth = OAuth(app)
+        oauth.register(
+            name='authentik',
+            client_id=OIDC_CLIENT_ID,
+            client_secret=OIDC_CLIENT_SECRET,
+            server_metadata_url=OIDC_DISCOVERY_URL,
+            client_kwargs={'scope': 'openid email profile'},
+        )
+        logger.info("OIDC enabled (Authentik / OpenID Connect)")
 
 
 def _load_config_yaml() -> Optional[Dict]:
@@ -257,10 +281,11 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     """Login page."""
+    if 'logged_in' in session:
+        return redirect(url_for('dashboard'))
+
     if request.method == 'POST':
         password = request.form.get('password', '')
-        
-        # Check password
         if check_password_hash(PASSWORD_HASH, password):
             session.permanent = True
             session['logged_in'] = True
@@ -268,12 +293,40 @@ def login():
             return redirect(url_for('dashboard'))
         else:
             flash('Invalid password', 'error')
-    
-    # If already logged in, redirect to dashboard
-    if 'logged_in' in session:
+
+    return render_template('login.html', oidc_enabled=OIDC_ENABLED)
+
+
+@app.route('/oidc/login')
+def oidc_login():
+    """Redirect to the OIDC provider (Authentik)."""
+    if not OIDC_ENABLED or oauth is None:
+        return redirect(url_for('login'))
+    redirect_uri = url_for('oidc_callback', _external=True)
+    return oauth.authentik.authorize_redirect(redirect_uri)
+
+
+@app.route('/oidc/callback')
+def oidc_callback():
+    """Handle the OIDC authorization callback."""
+    if not OIDC_ENABLED or oauth is None:
+        return redirect(url_for('login'))
+    try:
+        token = oauth.authentik.authorize_access_token()
+        userinfo = token.get('userinfo') or oauth.authentik.userinfo()
+        session.permanent = True
+        session['logged_in'] = True
+        session['oidc_user'] = {
+            'sub': userinfo.get('sub', ''),
+            'email': userinfo.get('email', ''),
+            'name': userinfo.get('name') or userinfo.get('preferred_username', ''),
+        }
+        flash('Login successful!', 'success')
         return redirect(url_for('dashboard'))
-    
-    return render_template('login.html')
+    except Exception as e:
+        logger.error(f"OIDC callback error: {e}", exc_info=True)
+        flash('OIDC login failed. Please try again.', 'error')
+        return redirect(url_for('login'))
 
 
 @app.route('/logout')

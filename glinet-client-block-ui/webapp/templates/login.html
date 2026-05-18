@@ -247,7 +247,6 @@
         .btn {
             width: 100%;
             padding: 0.875rem;
-            background: #ff1493;
             border: none;
             border-radius: 8px;
             color: #ffffff;
@@ -255,17 +254,48 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            text-decoration: none;
+        }
+
+        .btn-password {
+            background: #ff1493;
             box-shadow: 0 4px 12px rgba(255, 20, 147, 0.3);
         }
 
-        .btn:hover {
+        .btn-password:hover {
             background: #e01185;
             box-shadow: 0 6px 16px rgba(255, 20, 147, 0.4);
             transform: translateY(-1px);
         }
 
+        .btn-oidc {
+            background: #5c6bc0;
+            box-shadow: 0 4px 12px rgba(92, 107, 192, 0.35);
+        }
+
+        .btn-oidc:hover {
+            background: #4a58b0;
+            box-shadow: 0 6px 16px rgba(92, 107, 192, 0.45);
+            transform: translateY(-1px);
+        }
+
         .btn:active {
             transform: translateY(0);
+        }
+
+        .btn svg {
+            flex-shrink: 0;
+        }
+
+        .oidc-hint {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            margin-top: 1rem;
         }
 
         .alert {
@@ -345,19 +375,33 @@
                 {% endif %}
             {% endwith %}
 
-            <form method="POST" action="{{ url_for('login') }}">
-                <div class="form-group">
-                    <label for="password" data-i18n="password-label">パスワード</label>
-                    <input type="password" id="password" name="password"
-                           data-i18n-placeholder="password-placeholder"
-                           placeholder="パスワードを入力" required autofocus>
-                </div>
+            {% if oidc_enabled %}
+                <!-- OIDC mode: single sign-on button -->
+                <a href="{{ url_for('oidc_login') }}" class="btn btn-oidc">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                         stroke-linejoin="round" width="20" height="20">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                    <span data-i18n="oidc-btn">Authentik でログイン</span>
+                </a>
+                <p class="oidc-hint" data-i18n="oidc-hint">組織アカウントでサインインします</p>
+            {% else %}
+                <!-- Password mode: classic form -->
+                <form method="POST" action="{{ url_for('login') }}">
+                    <div class="form-group">
+                        <label for="password" data-i18n="password-label">パスワード</label>
+                        <input type="password" id="password" name="password"
+                               data-i18n-placeholder="password-placeholder"
+                               placeholder="パスワードを入力" required autofocus>
+                    </div>
 
-                <button type="submit" class="btn" data-i18n="login-btn">ログイン</button>
-            </form>
+                    <button type="submit" class="btn btn-password" data-i18n="login-btn">ログイン</button>
+                </form>
+            {% endif %}
         </div>
 
-        <p class="footer">Created by Karubits &mdash; Version 1.8 &mdash; 2026-05-16</p>
+        <p class="footer">Created by Karubits &mdash; Version 1.9 &mdash; 2026-05-18</p>
     </div>
 
     <script>
@@ -366,13 +410,17 @@
                 'subtitle': '🌐 Client Block Control',
                 'password-label': '🔑 Password',
                 'password-placeholder': 'Enter password',
-                'login-btn': 'Login'
+                'login-btn': 'Login',
+                'oidc-btn': 'Login with Authentik',
+                'oidc-hint': 'Sign in with your organization account'
             },
             ja: {
                 'subtitle': '🌐 クライアントブロック制御',
                 'password-label': '🔑 パスワード',
                 'password-placeholder': 'パスワードを入力',
-                'login-btn': 'ログイン'
+                'login-btn': 'ログイン',
+                'oidc-btn': 'Authentik でログイン',
+                'oidc-hint': '組織アカウントでサインインします'
             }
         };
 

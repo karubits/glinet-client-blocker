@@ -23,6 +23,14 @@ services:
       - ROUTER_HOST_3=${ROUTER_HOST_3:-}
       - ROUTER_PASS_3=${ROUTER_PASS_3:-}
       - ROUTER_NAME_3=${ROUTER_NAME_3:-}
+      # OIDC / Authentik single sign-on (set OIDC_ENABLED=true to activate)
+      # When enabled, the login page shows an "Login with Authentik" button instead of the password form.
+      # Set OIDC_ENABLED=false (or omit) to fall back to password authentication.
+      - OIDC_ENABLED=${OIDC_ENABLED:-false}
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-}
+      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-}
+      # Authentik discovery URL: https://<authentik-domain>/application/o/<app-slug>/.well-known/openid-configuration
+      - OIDC_DISCOVERY_URL=${OIDC_DISCOVERY_URL:-}
     restart: unless-stopped
     # labels:
     #   - "traefik.enable=true"
