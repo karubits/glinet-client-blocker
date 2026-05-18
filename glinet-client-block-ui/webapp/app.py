@@ -17,6 +17,7 @@ from functools import wraps
 from typing import List, Dict, Tuple, Optional
 
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
 import requests
 from authlib.integrations.flask_client import OAuth
@@ -42,10 +43,26 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'change-this-secret-key-in-production')
 
-# Session configuration - 4 hours
+# Trust X-Forwarded-Proto / X-Forwarded-Host headers set by Traefik (or any reverse proxy).
+# Required so url_for() generates https:// URLs (needed for OIDC redirect URI) and so
+# SESSION_COOKIE_SECURE is respected correctly.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
+_secret_key = os.environ.get('SECRET_KEY', 'change-this-secret-key-in-production')
+if _secret_key == 'change-this-secret-key-in-production':
+    logging.getLogger(__name__).critical(
+        "SECRET_KEY is set to the default placeholder — session cookies can be forged. "
+        "Set a random SECRET_KEY in your .env file: "
+        "python -c \"import secrets; print(secrets.token_hex(32))\""
+    )
+app.secret_key = _secret_key
+
+# Session configuration
 app.permanent_session_lifetime = timedelta(hours=4)
+app.config['SESSION_COOKIE_SECURE'] = True   # only send cookie over HTTPS (Traefik handles TLS)
+app.config['SESSION_COOKIE_HTTPONLY'] = True  # already Flask default; explicit for clarity
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # Active timed YouTube enables: {router_host: {'timer': threading.Timer, 'expires_at': float}}
 youtube_timers: Dict[str, Dict] = {}
