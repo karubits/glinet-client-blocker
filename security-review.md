@@ -82,4 +82,28 @@ Environment variables are a trusted configuration surface in this threat model (
 
 ## Applied Fixes
 
-Both fixes were applied to `webapp/app.py` in a single commit on branch `oidc`.
+Both fixes were applied to `webapp/app.py` in commit `652002e` on branch `oidc`.
+
+```
+652002e Security fixes: ProxyFix for Traefik + SECRET_KEY default warning
+```
+
+**Finding 1 — Secret key warning** (`app.py:52-58`):
+```python
+_secret_key = os.environ.get('SECRET_KEY', 'change-this-secret-key-in-production')
+if _secret_key == 'change-this-secret-key-in-production':
+    logging.getLogger(__name__).critical(
+        "SECRET_KEY is set to the default placeholder — session cookies can be forged. "
+        "Set a random SECRET_KEY in your .env file: "
+        "python -c \"import secrets; print(secrets.token_hex(32))\""
+    )
+app.secret_key = _secret_key
+```
+
+**Finding 2 — ProxyFix + secure cookie flags** (`app.py:45-62`):
+```python
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+```
