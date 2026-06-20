@@ -34,7 +34,8 @@ devices:
   #   laptop-office:
   #     mac: "AA:BB:CC:DD:EE:20"
 
-# Optional: AdGuard Home service IDs for network-wide blocking (e.g. YouTube, Roblox)
+# Optional: AdGuard Home service IDs for network-wide blocking (e.g. YouTube, Roblox, LINE)
 services:
   - youtube
   - roblox
+  - line

@@ -21,6 +21,12 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import check_password_hash, generate_password_hash
 import requests
 from authlib.integrations.flask_client import OAuth
+# authlib 1.3+ uses joserfc; RSA algorithms (RS256) must be explicitly imported
+# to register them in joserfc's JWS registry before any JWT verification occurs
+try:
+    import joserfc.rfc7518  # noqa: F401
+except ImportError:
+    pass
 
 # Import glinet_block from same directory
 from glinet_block import (
@@ -42,6 +48,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+APP_VERSION = "1.11"
+APP_VERSION_DATE = "2026-05-21"
+
 app = Flask(__name__)
 
 # Trust X-Forwarded-Proto / X-Forwarded-Host headers set by Traefik (or any reverse proxy).
@@ -57,6 +66,10 @@ if _secret_key == 'change-this-secret-key-in-production':
         "python -c \"import secrets; print(secrets.token_hex(32))\""
     )
 app.secret_key = _secret_key
+
+@app.context_processor
+def inject_version():
+    return {"app_version": APP_VERSION, "app_version_date": APP_VERSION_DATE}
 
 # Session configuration
 app.permanent_session_lifetime = timedelta(hours=4)

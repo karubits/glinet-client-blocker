@@ -6,7 +6,7 @@ A web interface for managing client blocking/unblocking and service blocking (Yo
 
 ```
 glinet-client-block/
-├── glinet-client-block-ui/    # Web UI (Docker)
+├── glinet-client-block/       # Web UI (Docker)
 │   ├── config/                # Configuration (mounted as volume)
 │   │   ├── config.example.yaml   # Template; copy to config.yaml
 │   │   └── README.md
@@ -18,39 +18,96 @@ glinet-client-block/
 └── README.md
 ```
 
-## Setup
+---
 
-1. **Copy config and env**:
-   ```bash
-   cd glinet-client-block-ui
-   cp ../.env.example .env
-   cp config/config.example.yaml config/config.yaml
-   ```
+## Deploying with Docker
 
-2. **Edit configuration**:
-   - **`.env`** – Web UI password; optional router hosts/passwords (see `.env.example` and `glinet-client-block-ui/README.md`).
-   - **`config/config.yaml`** – Single file for routers, client categories (mapping), and optional AdGuard services. See `config/config.example.yaml` and `config/README.md`.
+### 1. Create a directory and add a compose file
 
-**Security:** `config/config.yaml` and `.env` are in `.gitignore` and are not committed.
+Create a directory anywhere on your host, e.g. `~/glinet-block/`, then create a `compose.yml`:
 
-## Quick Start
+```yaml
+services:
+  glinet-webui:
+    image: harbor.karubits.com/public/glinet-client-block:latest
+    container_name: glinet-client-block-webui
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./config:/config:ro
+    env_file:
+      - .env
+    restart: unless-stopped
+```
+
+> For Traefik users, add the appropriate labels and networks — see the example in `glinet-client-block/compose.yml`.
+
+### 2. Create the config directory and config file
+
+The app reads `/config/config.yaml` inside the container, which maps to `./config/config.yaml` next to your compose file.
+
+```
+~/glinet-block/
+├── compose.yml
+├── .env
+└── config/
+    └── config.yaml      ← you must create this
+```
+
+Create `config/config.yaml` with your devices and (optionally) routers:
+
+```yaml
+# Devices: category -> device name -> mac
+# These appear as groups in the web UI for blocking/unblocking.
+devices:
+  Kids Devices:
+    ipad-kid:
+      mac: "AA:BB:CC:DD:EE:01"
+    nintendo-switch:
+      mac: "AA:BB:CC:DD:EE:02"
+  TV Devices:
+    smart-tv:
+      mac: "AA:BB:CC:DD:EE:10"
+
+# Optional: AdGuard Home service IDs for network-wide blocking
+services:
+  - youtube
+  - roblox
+```
+
+> **Client list is empty?** This almost always means `config/config.yaml` is missing or has no `devices` section. The file must exist at `./config/config.yaml` relative to your `compose.yml`.
+
+Routers are configured via env vars in `.env` (preferred) or in `config.yaml` under a `routers:` key.
+
+### 3. Create the .env file
+
+```env
+WEBUI_PASSWORD=your-secure-password
+SECRET_KEY=change-this-to-a-long-random-string
+
+# Router credentials (up to 3; add more numbered vars as needed)
+ROUTER_HOST_1=192.168.1.1
+ROUTER_PASS_1=your-router-password
+ROUTER_NAME_1=Home Router
+```
+
+For OIDC/Authentik, see the [Authentication](#authentication) section below.
+
+### 4. Start
 
 ```bash
-cd glinet-client-block-ui
 docker compose up -d
 ```
 
-Then open **http://localhost:5000** and log in with the password set in `WEBUI_PASSWORD` (or `.env`).
+Open **http://localhost:5000** and log in with the password set in `WEBUI_PASSWORD`.
 
 ---
 
 ## Authentication
 
-The app supports two mutually exclusive authentication modes, controlled by the `OIDC_ENABLED` environment variable.
+Two mutually exclusive modes, controlled by `OIDC_ENABLED`.
 
 ### Password mode (default)
-
-The login page shows a password form. Set `WEBUI_PASSWORD` in `.env`:
 
 ```env
 WEBUI_PASSWORD=your-secure-password
@@ -58,14 +115,11 @@ WEBUI_PASSWORD=your-secure-password
 
 ### OIDC mode (Authentik / OpenID Connect)
 
-When `OIDC_ENABLED=true`, the login page shows a **"Login with Authentik"** button instead of the password form. Authentication is fully delegated to your Authentik instance.
+When `OIDC_ENABLED=true`, the login page shows a **"Login with Authentik"** button instead of the password form. Set `OIDC_ENABLED=false` and restart to revert.
 
-To switch back to password auth at any time, set `OIDC_ENABLED=false` and restart the container — no other changes needed.
-
-#### Setting up the Authentik application
+#### Authentik setup
 
 1. In **Authentik Admin → Applications**, create a new **OAuth2/OpenID Provider**:
-   - **Authorization flow**: choose your preferred flow (e.g. `default-provider-authorization-implicit-consent`)
    - **Client type**: `Confidential`
    - **Redirect URI**: `https://<your-app-domain>/oidc/callback`
    - **Scopes**: `openid`, `email`, `profile`
@@ -73,38 +127,54 @@ To switch back to password auth at any time, set `OIDC_ENABLED=false` and restar
 
 2. Create an **Application** that uses this provider.
 
-3. Copy the **OpenID Configuration URL** from the provider's detail page — it looks like:
+3. Copy the **OpenID Configuration URL** from the provider detail page:
    ```
    https://<authentik-domain>/application/o/<app-slug>/.well-known/openid-configuration
    ```
 
-#### Environment variables
-
-Add these to your `.env` file:
+#### Required env vars
 
 ```env
-# Enable OIDC (set to false to revert to password auth)
 OIDC_ENABLED=true
-
-# From the Authentik OAuth2 provider
 OIDC_CLIENT_ID=your-client-id
 OIDC_CLIENT_SECRET=your-client-secret
-
-# OpenID Connect discovery URL
 OIDC_DISCOVERY_URL=https://auth.example.com/application/o/glinet-block/.well-known/openid-configuration
-
-# Flask session key — must be a long random string when exposed to the internet
-SECRET_KEY=change-this-to-a-random-secret
+SECRET_KEY=change-this-to-a-long-random-string
 ```
 
-Then restart the container:
+#### Restricting access
+
+Manage access on the Authentik side via **Application → Policy / Group Bindings**. Users outside bound groups are denied before the callback reaches the app.
+
+---
+
+## Publishing to Harbor
+
+The image is published to `harbor.karubits.com/public/glinet-client-block`.
+
+Build and push with both a version tag and `latest`:
+
 ```bash
-docker compose up -d
+cd glinet-client-block
+
+docker build \
+  -t harbor.karubits.com/public/glinet-client-block:1.11 \
+  -t harbor.karubits.com/public/glinet-client-block:latest \
+  .
+
+docker push harbor.karubits.com/public/glinet-client-block:1.11
+docker push harbor.karubits.com/public/glinet-client-block:latest
 ```
 
-#### Restricting access to specific groups
+The version is defined in `webapp/app.py` (`APP_VERSION` / `APP_VERSION_DATE`) and rendered automatically in the footer of both pages. To bump the version, update those two constants and rebuild.
 
-Access control is managed entirely on the Authentik side — no changes to this app are needed. In Authentik, open your **Application → Policy / Group Bindings** and bind it to the groups that should have access. Users outside those groups will be denied by Authentik before the callback ever reaches the app.
+> Log in first if needed: `docker login harbor.karubits.com`
+
+To pull the image on another host:
+
+```bash
+docker pull harbor.karubits.com/public/glinet-client-block:latest
+```
 
 ---
 

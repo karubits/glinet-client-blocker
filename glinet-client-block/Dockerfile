@@ -24,8 +24,7 @@ RUN mkdir -p data/clients
 
 EXPOSE 5000
 
-ENV FLASK_APP=app.py
 ENV PYTHONUNBUFFERED=1
 
-CMD ["python", "app.py"]
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--timeout", "60", "app:app"]
 

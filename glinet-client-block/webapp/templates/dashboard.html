@@ -674,14 +674,16 @@
             margin-top: auto;
         }
 
-        /* YouTube / Roblox Block – per-router rows */
+        /* YouTube / Roblox / LINE Block – per-router rows */
         .youtube-block-section .service-block-title,
-        .roblox-block-section .service-block-title {
+        .roblox-block-section .service-block-title,
+        .line-block-section .service-block-title {
             margin-bottom: 0.25rem;
         }
 
         .youtube-block-section .service-block-description,
-        .roblox-block-section .service-block-description {
+        .roblox-block-section .service-block-description,
+        .line-block-section .service-block-description {
             margin-bottom: 1.25rem;
         }
 
@@ -1095,7 +1097,7 @@
         /* ---- Services side-by-side grid ---- */
         .services-row {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(3, 1fr);
             gap: 1.5rem;
             margin-bottom: 2rem;
         }
@@ -1208,7 +1210,7 @@
         </div>
 
         <div id="content" class="hidden">
-            <!-- Service Block Sections (YouTube + Roblox side by side) -->
+            <!-- Service Block Sections (YouTube + Roblox + LINE side by side) -->
             <div class="services-row">
                 <div class="service-block-section youtube-block-section">
                     <h2 class="service-block-title" data-i18n="youtube-block-title">YouTube Block</h2>
@@ -1220,6 +1222,12 @@
                     <h2 class="service-block-title" data-i18n="roblox-block-title">Roblox Block</h2>
                     <p class="service-block-description" data-i18n="roblox-block-description">Block or allow Roblox per router using AdGuard Home.</p>
                     <div id="roblox-router-list" class="youtube-router-list"></div>
+                </div>
+
+                <div class="service-block-section line-block-section">
+                    <h2 class="service-block-title" data-i18n="line-block-title">LINE Block</h2>
+                    <p class="service-block-description" data-i18n="line-block-description">Block or allow LINE per router using AdGuard Home.</p>
+                    <div id="line-router-list" class="youtube-router-list"></div>
                 </div>
             </div>
 
@@ -1265,7 +1273,7 @@
                 <div id="categories"></div>
             </div>
         </div>
-        <p class="footer">Created by Karubits &mdash; Version 1.8 &mdash; 2026-05-16</p>
+        <p class="footer">Created by Karubits &mdash; Version {{ app_version }} &mdash; {{ app_version_date }}</p>
     </div>
 
     <script>
@@ -1310,12 +1318,16 @@
                 'youtube-block-description': 'Block or allow YouTube per router using AdGuard Home.',
                 'roblox-block-title': '🎮 Roblox Block',
                 'roblox-block-description': 'Block or allow Roblox per router using AdGuard Home.',
+                'line-block-title': '💬 LINE Block',
+                'line-block-description': 'Block or allow LINE per router using AdGuard Home.',
                 'status-blocked': '🔴 Blocked',
                 'status-enabled': '🟢 Enabled',
                 'block-youtube': 'Block',
                 'enable-youtube': 'Enable',
                 'block-roblox': 'Block',
                 'enable-roblox': 'Enable',
+                'block-line': 'Block',
+                'enable-line': 'Enable',
                 'block-all-services': 'Block All Services',
                 'unblock-all-services': 'Unblock All Services',
                 'block-service': 'Block',
@@ -1379,12 +1391,16 @@
                 'youtube-block-description': 'AdGuard HomeでルーターごとにYouTubeをブロックまたは許可します。',
                 'roblox-block-title': '🎮 Robloxブロック',
                 'roblox-block-description': 'AdGuard HomeでルーターごとにRobloxをブロックまたは許可します。',
+                'line-block-title': '💬 LINEブロック',
+                'line-block-description': 'AdGuard HomeでルーターごとにLINEをブロックまたは許可します。',
                 'status-blocked': '🔴 ブロック済み',
                 'status-enabled': '🟢 許可中',
                 'block-youtube': 'ブロック',
                 'enable-youtube': '許可',
                 'block-roblox': 'ブロック',
                 'enable-roblox': '許可',
+                'block-line': 'ブロック',
+                'enable-line': '許可',
                 'block-all-services': 'すべてのサービスをブロック',
                 'unblock-all-services': 'すべてのサービスのブロックを解除',
                 'block-service': 'ブロック',
@@ -1413,6 +1429,7 @@
 
         const YOUTUBE_SERVICE_ID = 'youtube';
         const ROBLOX_SERVICE_ID = 'roblox';
+        const LINE_SERVICE_ID = 'line';
 
         let allClients = [];
         let categories = [];
@@ -1424,6 +1441,8 @@
         let youtubeStatusByRouter = [];
         /** Per-router Roblox block status: { router, router_name, success, error?, robloxBlocked } */
         let robloxStatusByRouter = [];
+        /** Per-router LINE block status: { router, router_name, success, error?, lineBlocked } */
+        let lineStatusByRouter = [];
         /** Active YouTube timers from backend: { [router_host]: { expires_at, remaining_seconds } } */
         let youtubeTimers = {};
 
@@ -1457,9 +1476,10 @@
             localStorage.setItem('language', lang);
             document.getElementById('language-select').value = lang;
             updateTranslations();
-            // Re-render dynamic sections so YouTube/Roblox button labels translate
+            // Re-render dynamic sections so YouTube/Roblox/LINE button labels translate
             if (document.getElementById('youtube-router-list')) renderYouTubeSection();
             if (document.getElementById('roblox-router-list')) renderRobloxSection();
+            if (document.getElementById('line-router-list')) renderLineSection();
         }
 
         function changeLanguage() {
@@ -1509,9 +1529,10 @@
                 const clientsData = await clientsRes.json();
                 allClients = clientsData.clients || [];
 
-                // Load per-router YouTube and Roblox (blocked services) status
+                // Load per-router YouTube, Roblox and LINE (blocked services) status
                 await loadYouTubeStatus();
                 await loadRobloxStatus();
+                await loadLineStatus();
 
                 renderUI();
             } catch (error) {
@@ -1615,6 +1636,39 @@
             }
         }
 
+        async function loadLineStatus() {
+            try {
+                const res = await fetch('/api/services/status?router=all');
+                if (!res.ok) {
+                    lineStatusByRouter = [];
+                    return;
+                }
+                const data = await res.json();
+                if (data.results && Array.isArray(data.results)) {
+                    lineStatusByRouter = data.results.map(r => ({
+                        router: r.router,
+                        router_name: r.router_name || r.router,
+                        success: !!r.success,
+                        error: r.error,
+                        lineBlocked: (r.blocked_services || []).includes(LINE_SERVICE_ID)
+                    }));
+                } else if (data.blocked_services !== undefined) {
+                    lineStatusByRouter = [{
+                        router: data.router,
+                        router_name: data.router_name || data.router,
+                        success: true,
+                        error: null,
+                        lineBlocked: (data.blocked_services || []).includes(LINE_SERVICE_ID)
+                    }];
+                } else {
+                    lineStatusByRouter = [];
+                }
+            } catch (error) {
+                console.error('Error loading LINE status:', error);
+                lineStatusByRouter = [];
+            }
+        }
+
         function renderYouTubeSection() {
             const listEl = document.getElementById('youtube-router-list');
             listEl.innerHTML = '';
@@ -1709,6 +1763,41 @@
                         <button class="btn ${robloxBlocked ? 'btn-unblock' : 'btn-block'}" onclick="${robloxBlocked ? 'enableRoblox' : 'blockRoblox'}('${escapeHtml(router.host)}')">
                             <span class="material-icons" style="font-size: 18px;">${robloxBlocked ? 'check_circle' : 'block'}</span>
                             <span>${robloxBlocked ? t('enable-roblox') : t('block-roblox')}</span>
+                        </button>
+                    </div>
+                `;
+                listEl.appendChild(row);
+            });
+        }
+
+        function renderLineSection() {
+            const listEl = document.getElementById('line-router-list');
+            listEl.innerHTML = '';
+            if (routers.length === 0) {
+                listEl.innerHTML = '<div style="padding: 1rem; color: var(--text-secondary);">No routers configured.</div>';
+                return;
+            }
+            routers.forEach(router => {
+                const status = lineStatusByRouter.find(r =>
+                    r.router === router.host || r.router_name === (router.name || router.host)
+                );
+                const success = status ? status.success : false;
+                const lineBlocked = status ? status.lineBlocked : false;
+                const statusClass = !success ? 'unknown' : (lineBlocked ? 'blocked' : 'enabled');
+                const statusLabel = !success
+                    ? (status && status.error ? `⚠️ ${status.error}` : '⚠️ —')
+                    : (lineBlocked ? t('status-blocked') : t('status-enabled'));
+                const row = document.createElement('div');
+                row.className = 'youtube-router-row' + (status && !status.success ? ' error' : '');
+                row.innerHTML = `
+                    <div class="youtube-router-info">
+                        <span class="youtube-router-name">${escapeHtml(router.name || router.host)}</span>
+                        <span class="youtube-status-light ${statusClass}">${escapeHtml(statusLabel)}</span>
+                    </div>
+                    <div class="youtube-router-action">
+                        <button class="btn ${lineBlocked ? 'btn-unblock' : 'btn-block'}" onclick="${lineBlocked ? 'enableLine' : 'blockLine'}('${escapeHtml(router.host)}')">
+                            <span class="material-icons" style="font-size: 18px;">${lineBlocked ? 'check_circle' : 'block'}</span>
+                            <span>${lineBlocked ? t('enable-line') : t('block-line')}</span>
                         </button>
                     </div>
                 `;
@@ -1846,6 +1935,58 @@
             }
         }
 
+        async function blockLine(routerHost) {
+            try {
+                showAlert(t('blocking-service', { service: 'LINE', router: getRouterName(routerHost) }), 'info');
+                const res = await fetch('/api/services/block', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ services: [LINE_SERVICE_ID], router: routerHost })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    const result = data.results && data.results.find(r => r.router === routerHost || r.router_name === routerHost);
+                    if (result && result.success) {
+                        showAlert(t('service-blocked-success', { service: 'LINE', routers: result.router_name || routerHost }), 'success');
+                    } else if (result && !result.success) {
+                        showAlert(`${result.router_name || routerHost}: ${result.error || 'Failed'}`, 'error');
+                    }
+                    await loadLineStatus();
+                    renderLineSection();
+                } else {
+                    showAlert(t('error', { error: data.error || 'Unknown error' }), 'error');
+                }
+            } catch (error) {
+                showAlert(t('error', { error: error.message }), 'error');
+            }
+        }
+
+        async function enableLine(routerHost) {
+            try {
+                showAlert(t('unblocking-service', { service: 'LINE', router: getRouterName(routerHost) }), 'info');
+                const res = await fetch('/api/services/unblock', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ services: [LINE_SERVICE_ID], router: routerHost })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    const result = data.results && data.results.find(r => r.router === routerHost || r.router_name === routerHost);
+                    if (result && result.success) {
+                        showAlert(t('service-unblocked-success', { service: 'LINE', routers: result.router_name || routerHost }), 'success');
+                    } else if (result && !result.success) {
+                        showAlert(`${result.router_name || routerHost}: ${result.error || 'Failed'}`, 'error');
+                    }
+                    await loadLineStatus();
+                    renderLineSection();
+                } else {
+                    showAlert(t('error', { error: data.error || 'Unknown error' }), 'error');
+                }
+            } catch (error) {
+                showAlert(t('error', { error: error.message }), 'error');
+            }
+        }
+
         function toggleExpand(id) {
             const body = document.getElementById(id + '-body');
             const arrow = document.getElementById(id + '-arrow');
@@ -1926,9 +2067,10 @@
                 categoriesDiv.appendChild(section);
             });
 
-            // Render YouTube and Roblox block sections (per-router)
+            // Render YouTube, Roblox and LINE block sections (per-router)
             renderYouTubeSection();
             renderRobloxSection();
+            renderLineSection();
         }
 
         async function blockAll() {
