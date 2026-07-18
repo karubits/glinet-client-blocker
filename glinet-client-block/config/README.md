@@ -47,6 +47,9 @@ services:
 - **routers**: List of `host`, `password`, and optional `name`. Prefer defining routers in Docker Compose env vars.
 - **devices**: Category names as keys; each value is a dict of device name → `mac` (and optional `name` for display). Add more categories and devices as needed.
 - **services**: Optional list of AdGuard service IDs for network-wide blocking in the Web UI.
+  Any service listed here can also be put on a recurring **schedule** (see the ⏰ Scheduled
+  Blocking panel in the dashboard). Schedules are stored in the separate writable `data/` volume
+  (`/data`), **not** in this read-only config directory.
 
 The file is designed to be expanded: add more routers, categories, or devices without changing the format.
 

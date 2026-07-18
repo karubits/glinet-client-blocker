@@ -69,14 +69,38 @@ glinet-client-block/
 │   ├── glinet_block.py  # Blocking logic
 │   ├── templates/       # HTML templates (login, dashboard)
 │   └── static/          # Static assets
-├── config/              # Configuration (mounted as volume at /config/)
+├── config/              # Configuration (mounted read-only at /config/)
 │   ├── config.yaml      # Your config: routers, devices, services (git-ignored)
 │   ├── config.example.yaml
 │   └── README.md
+├── data/                # Writable store for schedules (mounted at /data/, git-ignored)
 ├── Dockerfile
 ├── compose.yml
 └── README.md
 ```
+
+---
+
+## Scheduled Blocking
+
+Services (LINE, YouTube, Roblox, or any AdGuard blocked-service id in your `services:` list)
+can be blocked on a recurring weekly schedule from the **⏰ Scheduled Blocking** panel on the
+dashboard.
+
+- **Per router, per service** — each router can have its own schedule for each service.
+- **Weekly windows** — pick the days and a start/end time (service-local timezone, default
+  `Asia/Tokyo`). A window whose end time is *earlier* than its start **wraps past midnight** and
+  belongs to its start day — e.g. `Mon–Fri 14:00→04:00` blocks Monday afternoon through Tuesday
+  04:00, and so on. Add a second window (e.g. `Sat–Sun 20:00→06:00`) for a different weekend
+  schedule.
+- **Manual override wins until the next change** — a background reconcile loop only acts at
+  window boundaries, so if you manually block/unblock a service mid-window it stays that way
+  until the next scheduled transition.
+
+Schedules and their runtime state are stored in the **writable `data/` volume** (`schedules.json`
+and `schedule_state.json`), because `/config` is mounted read-only. The `compose.yml` mounts
+`./data:/data` for this. The reconcile loop runs in a single gunicorn worker (guarded by a file
+lock) and enforces boundaries within one `SCHEDULE_INTERVAL` tick.
 
 ---
 
@@ -98,6 +122,8 @@ glinet-client-block/
 | `OIDC_CLIENT_ID` | — | Authentik OAuth2 client ID |
 | `OIDC_CLIENT_SECRET` | — | Authentik OAuth2 client secret |
 | `OIDC_DISCOVERY_URL` | — | Authentik OpenID configuration URL |
+| `DATA_DIR` | `/data` | Writable directory for schedules + runtime state (mount a volume here) |
+| `SCHEDULE_INTERVAL` | `30` | Seconds between schedule reconcile ticks |
 
 ---
 
@@ -116,5 +142,7 @@ docker compose logs -f glinet-webui
 **"No clients found"** — Add a `devices:` section to `config/config.yaml`. See `config/config.example.yaml`.
 
 **YouTube / Roblox block fails** — By default the app uses the router proxy (root + router password); no AdGuard credentials needed. Check logs for details.
+
+**Schedules don't apply / aren't saved** — Ensure the `./data:/data` volume is mounted and writable. On boot exactly one worker logs `Scheduler: acquired lock, reconcile loop running`; the other logs that it skipped. Do **not** add `--preload` to gunicorn, as it breaks the per-worker file lock.
 
 **Login fails** — Ensure `SECRET_KEY` is set and `WEBUI_PASSWORD` matches what you're entering. For OIDC, verify the redirect URI in Authentik matches `https://<your-domain>/oidc/callback`.

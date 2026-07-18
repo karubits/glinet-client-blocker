@@ -8,11 +8,14 @@ A web interface for managing client blocking/unblocking on GL.iNet routers.
 import os
 import sys
 import csv
+import json
+import fcntl
 import logging
 import time
 import threading
 import yaml
-from datetime import timedelta
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from functools import wraps
 from typing import List, Dict, Tuple, Optional
 
@@ -48,8 +51,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-APP_VERSION = "1.11"
-APP_VERSION_DATE = "2026-05-21"
+APP_VERSION = "1.12"
+APP_VERSION_DATE = "2026-07-18"
 
 app = Flask(__name__)
 
@@ -116,6 +119,29 @@ MAPPING_FILE = os.path.join(CONFIG_DIR, 'mapping.csv')
 ROUTERS_FILE = os.path.join(CONFIG_DIR, 'routers.csv')
 CLIENTS_DIR = os.path.join(CONFIG_DIR, 'clients')
 SERVICES_FILE = os.path.join(CONFIG_DIR, 'services.yml')
+
+# Writable data directory for schedule config + runtime state. The /config mount is read-only,
+# so recurring schedules (which are edited from the UI) live here instead.
+# Default to /data (mount a writable volume there) or fall back to webapp/data for local dev.
+DATA_DIR = os.environ.get('DATA_DIR', '/data')
+if not os.path.isdir(DATA_DIR):
+    try:
+        os.makedirs(DATA_DIR, exist_ok=True)
+    except OSError:
+        # e.g. /data not mounted and not creatable -> fall back to a local dev directory
+        DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+        try:
+            os.makedirs(DATA_DIR, exist_ok=True)
+        except OSError:
+            pass
+
+SCHEDULES_FILE = os.path.join(DATA_DIR, 'schedules.json')
+SCHEDULE_STATE_FILE = os.path.join(DATA_DIR, 'schedule_state.json')
+SCHEDULER_LOCK_FILE = os.path.join(DATA_DIR, 'scheduler.lock')
+# How often the reconcile loop wakes up (seconds); schedule boundaries are enforced within one tick.
+RECONCILE_INTERVAL = int(os.environ.get('SCHEDULE_INTERVAL', '30'))
+# Day tokens indexed to match datetime.weekday() (Monday == 0).
+DAY_TOKENS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
 
 # Optional AdGuard Home credentials for YouTube block. On GL.iNet, AdGuard is proxied at
 # http://router/control/; use router session (root + router password) via AdGuardViaRouter.
@@ -284,6 +310,230 @@ def get_adguard_client(router_host: str, password: str, router_name: str):
         except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
             pass
     return None, "Authentication failed (try router proxy with root + router password, or set ADGUARD_PASSWORD)"
+
+
+# ---------------------------------------------------------------------------
+# Scheduled service blocking
+# ---------------------------------------------------------------------------
+# Schedules are stored per router -> per service as a list of weekly windows. A window
+# blocks the service on the given weekdays between `start` and `end` (HH:MM, service-local
+# time). A window whose `end` is <= `start` wraps past midnight and is treated as belonging
+# to its start day (e.g. Fri 14:00->04:00 blocks Fri afternoon through Sat 04:00).
+#
+# A background reconcile loop (single worker, guarded by an flock) applies changes only at
+# window boundaries, so a manual block/unblock between boundaries sticks until the next
+# scheduled transition.
+
+
+def _load_json(path: str, default):
+    """Load JSON from path, returning `default` on any error/absence."""
+    try:
+        if os.path.exists(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception as e:
+        logger.error(f"Error reading {path}: {e}")
+    return default
+
+
+def _save_json(path: str, data) -> None:
+    """Atomically write JSON to path (temp file + os.replace)."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = f"{path}.tmp"
+    with open(tmp, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2)
+    os.replace(tmp, path)
+
+
+def _load_schedules() -> Dict:
+    """Load the schedules document, normalising to {'version', 'routers': {...}}."""
+    data = _load_json(SCHEDULES_FILE, None)
+    if not isinstance(data, dict):
+        data = {}
+    if not isinstance(data.get('routers'), dict):
+        data['routers'] = {}
+    data.setdefault('version', 1)
+    return data
+
+
+def _parse_hhmm(value) -> Optional[int]:
+    """Parse 'HH:MM' into minutes-of-day (0..1439), or None if invalid."""
+    if not isinstance(value, str):
+        return None
+    try:
+        hh, mm = value.split(':')
+        h, m = int(hh), int(mm)
+    except (ValueError, AttributeError):
+        return None
+    if 0 <= h <= 23 and 0 <= m <= 59:
+        return h * 60 + m
+    return None
+
+
+def _service_now(sched: Dict) -> datetime:
+    """Current time in the schedule's timezone (defaults to Asia/Tokyo)."""
+    tz = (sched or {}).get('timezone') or 'Asia/Tokyo'
+    try:
+        return datetime.now(ZoneInfo(tz))
+    except Exception:
+        return datetime.now(ZoneInfo('Asia/Tokyo'))
+
+
+def _window_active(window: Dict, now: datetime) -> bool:
+    """True if `now` falls inside this weekly window (handles wrap past midnight)."""
+    if not isinstance(window, dict):
+        return False
+    days = window.get('days') or []
+    start = _parse_hhmm(window.get('start'))
+    end = _parse_hhmm(window.get('end'))
+    if start is None or end is None or not days:
+        return False
+    today = DAY_TOKENS[now.weekday()]
+    prev = DAY_TOKENS[(now.weekday() - 1) % 7]
+    mod = now.hour * 60 + now.minute
+    if end > start:
+        return today in days and start <= mod < end
+    if end < start:
+        # Wraps past midnight; the window belongs to its start day.
+        return (today in days and mod >= start) or (prev in days and mod < end)
+    # start == end: zero-length window, treated as inactive (use 00:00-23:59 for all day).
+    return False
+
+
+def _service_should_block(sched: Dict, now: datetime) -> bool:
+    """True if any enabled window of this schedule is active at `now`."""
+    if not sched or not sched.get('enabled'):
+        return False
+    for window in sched.get('windows') or []:
+        if _window_active(window, now):
+            return True
+    return False
+
+
+def _next_transition(sched: Dict, now: datetime) -> Optional[str]:
+    """ISO timestamp of the next time the block state flips within a week, or None."""
+    if not sched or not sched.get('enabled'):
+        return None
+    current = _service_should_block(sched, now)
+    probe = now.replace(second=0, microsecond=0)
+    for _ in range(7 * 24 * 60):
+        probe = probe + timedelta(minutes=1)
+        if _service_should_block(sched, probe) != current:
+            return probe.isoformat()
+    return None
+
+
+def _reconcile_schedules() -> None:
+    """Apply scheduled block/unblock transitions across all routers.
+
+    Only acts when a service's desired state differs from the last state the scheduler
+    recorded, so manual overrides between boundaries are left untouched. Never contacts a
+    router unless at least one of its services is transitioning.
+    """
+    schedules = _load_schedules()
+    routers_cfg = schedules.get('routers') or {}
+    if not routers_cfg:
+        return
+
+    state = _load_json(SCHEDULE_STATE_FILE, {})
+    if not isinstance(state, dict):
+        state = {}
+    router_creds = {host: (pw, name) for host, pw, name in get_routers_from_env()}
+    state_changed = False
+
+    for host, svc_map in routers_cfg.items():
+        if not isinstance(svc_map, dict):
+            continue
+
+        to_block, to_unblock, pending = set(), set(), {}
+        for service, sched in svc_map.items():
+            if not isinstance(sched, dict) or not sched.get('enabled'):
+                continue
+            desired = _service_should_block(sched, _service_now(sched))
+            last = state.get(f"{host}|{service}")
+            last_bool = {'blocked': True, 'unblocked': False}.get(last)
+            if last_bool is None or desired != last_bool:
+                pending[service] = desired
+                (to_block if desired else to_unblock).add(service)
+
+        if not pending:
+            continue
+
+        creds = router_creds.get(host)
+        if not creds:
+            logger.warning(f"Scheduler: router {host} has schedules but is not configured; skipping")
+            continue
+        password, name = creds
+
+        try:
+            adguard, err = get_adguard_client(host, password, name)
+            if err or not adguard:
+                logger.error(f"Scheduler: AdGuard connect failed on {name} ({host}): {err}")
+                continue
+            try:
+                current = adguard.get_blocked_services()
+                if current is None:
+                    logger.error(f"Scheduler: failed to get blocked services on {name}")
+                    continue
+                ids = set(current.get('ids', []))
+                new_ids = (ids | to_block) - to_unblock
+                if new_ids != ids:
+                    if not adguard.update_blocked_services(list(new_ids), current.get('schedule')):
+                        logger.error(f"Scheduler: update failed on {name}")
+                        continue
+                    logger.info(
+                        f"Scheduler: {name} block+={sorted(to_block)} unblock-={sorted(to_unblock)}"
+                    )
+                # Record applied state (even when ids already matched the desired state).
+                for service, desired in pending.items():
+                    state[f"{host}|{service}"] = 'blocked' if desired else 'unblocked'
+                    state_changed = True
+            finally:
+                adguard.logout()
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            logger.error(f"Scheduler: {name} ({host}) unreachable: {e}")
+        except Exception as e:
+            logger.error(f"Scheduler: error on {name} ({host}): {e}", exc_info=True)
+
+    if state_changed:
+        try:
+            _save_json(SCHEDULE_STATE_FILE, state)
+        except Exception as e:
+            logger.error(f"Scheduler: failed to persist state: {e}", exc_info=True)
+
+
+# Held open for the process lifetime so the flock stays acquired by the winning worker.
+_scheduler_lock_fh = None
+
+
+def _scheduler_loop() -> None:
+    logger.info("Schedule reconcile loop started (interval=%ss)", RECONCILE_INTERVAL)
+    while True:
+        try:
+            _reconcile_schedules()
+        except Exception as e:
+            logger.error(f"Scheduler loop error: {e}", exc_info=True)
+        time.sleep(RECONCILE_INTERVAL)
+
+
+def _start_scheduler_thread() -> None:
+    """Start the reconcile loop in exactly one worker, using an flock for mutual exclusion.
+
+    gunicorn runs multiple workers; each imports this module and calls here, but only the
+    worker that wins the exclusive lock actually runs the loop. (Requires no --preload so
+    each worker opens its own file descriptor.)
+    """
+    global _scheduler_lock_fh
+    try:
+        os.makedirs(DATA_DIR, exist_ok=True)
+        fh = open(SCHEDULER_LOCK_FILE, 'w')
+        fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        logger.info("Scheduler: another worker holds the lock; reconcile loop not started here")
+        return
+    _scheduler_lock_fh = fh  # keep reference alive so the lock is retained
+    threading.Thread(target=_scheduler_loop, name='schedule-reconcile', daemon=True).start()
+    logger.info("Scheduler: acquired lock, reconcile loop running in this worker")
 
 
 def login_required(f):
@@ -1364,6 +1614,126 @@ def youtube_timer_status():
             'remaining_seconds': int(remaining)
         }
     return jsonify({'timers': timers})
+
+
+@app.route('/api/schedules', methods=['GET'])
+@login_required
+def get_schedules():
+    """Return the saved schedules plus available services and routers for the editor."""
+    try:
+        schedules = _load_schedules()
+        services = [{'id': s, 'name': _get_service_display_name(s)} for s in _load_services()]
+        routers = [{'host': h, 'name': n} for h, _, n in get_routers_from_env()]
+        return jsonify({'schedules': schedules, 'services': services, 'routers': routers})
+    except Exception as e:
+        logger.error(f"Error getting schedules: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/schedules', methods=['PUT'])
+@login_required
+def save_schedules():
+    """Validate and replace-all save the schedules document, then reconcile immediately."""
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return jsonify({'error': 'Invalid payload'}), 400
+    routers_in = data.get('routers')
+    if not isinstance(routers_in, dict):
+        return jsonify({'error': 'Missing "routers" object'}), 400
+
+    valid_hosts = {h for h, _, _ in get_routers_from_env()}
+    valid_services = set(_load_services())
+    cleaned = {}
+
+    for host, svc_map in routers_in.items():
+        if host not in valid_hosts:
+            return jsonify({'error': f'Unknown router: {host}'}), 400
+        if not isinstance(svc_map, dict):
+            return jsonify({'error': f'Invalid schedules for router {host}'}), 400
+        cleaned_services = {}
+        for service, sched in svc_map.items():
+            if service not in valid_services:
+                return jsonify({'error': f'Unknown service: {service}'}), 400
+            if not isinstance(sched, dict):
+                return jsonify({'error': f'Invalid schedule for {service}'}), 400
+            tz = sched.get('timezone') or 'Asia/Tokyo'
+            try:
+                ZoneInfo(tz)
+            except Exception:
+                return jsonify({'error': f'Invalid timezone: {tz}'}), 400
+            windows_in = sched.get('windows') or []
+            if not isinstance(windows_in, list):
+                return jsonify({'error': f'Invalid windows for {service}'}), 400
+            cleaned_windows = []
+            for w in windows_in:
+                if not isinstance(w, dict):
+                    return jsonify({'error': 'Invalid window'}), 400
+                days = w.get('days') or []
+                if not isinstance(days, list) or not days or any(d not in DAY_TOKENS for d in days):
+                    return jsonify({'error': f'Invalid days: {days}'}), 400
+                if _parse_hhmm(w.get('start')) is None or _parse_hhmm(w.get('end')) is None:
+                    return jsonify({'error': 'Invalid start/end time (use HH:MM)'}), 400
+                cleaned_windows.append({
+                    'days': [d for d in DAY_TOKENS if d in days],  # normalise order, dedupe
+                    'start': w['start'],
+                    'end': w['end'],
+                })
+            cleaned_services[service] = {
+                'enabled': bool(sched.get('enabled', True)),
+                'timezone': tz,
+                'windows': cleaned_windows,
+            }
+        if cleaned_services:
+            cleaned[host] = cleaned_services
+
+    doc = {'version': 1, 'routers': cleaned}
+    try:
+        _save_json(SCHEDULES_FILE, doc)
+    except Exception as e:
+        logger.error(f"Error saving schedules: {e}", exc_info=True)
+        return jsonify({'error': 'Failed to save schedules'}), 500
+
+    # Apply changes right away rather than waiting for the next reconcile tick.
+    try:
+        _reconcile_schedules()
+    except Exception as e:
+        logger.error(f"Reconcile after save failed: {e}", exc_info=True)
+
+    return jsonify({'success': True, 'schedules': doc})
+
+
+@app.route('/api/schedules/status', methods=['GET'])
+@login_required
+def schedules_status():
+    """Per router+service: whether it's in a blocked window now and when it next changes."""
+    try:
+        schedules = _load_schedules()
+        routers_cfg = schedules.get('routers') or {}
+        out = {}
+        for host, svc_map in routers_cfg.items():
+            if not isinstance(svc_map, dict):
+                continue
+            svc_out = {}
+            for service, sched in svc_map.items():
+                if not isinstance(sched, dict):
+                    continue
+                now = _service_now(sched)
+                svc_out[service] = {
+                    'enabled': bool(sched.get('enabled')),
+                    'blocked_now': _service_should_block(sched, now),
+                    'next_change': _next_transition(sched, now),
+                    'timezone': sched.get('timezone') or 'Asia/Tokyo',
+                }
+            out[host] = svc_out
+        return jsonify({'status': out})
+    except Exception as e:
+        logger.error(f"Error getting schedules status: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+# Start the reconcile loop at import time so it runs under gunicorn (single worker via flock)
+# as well as the local dev server below.
+_start_scheduler_thread()
 
 
 if __name__ == '__main__':

@@ -776,6 +776,138 @@
             box-shadow: 0 4px 12px rgba(255, 20, 147, 0.3);
         }
 
+        /* Scheduled blocking */
+        .schedule-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .schedule-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem 1.25rem;
+            align-items: flex-start;
+            justify-content: space-between;
+        }
+
+        .schedule-card-info { flex: 1 1 260px; min-width: 0; }
+
+        .schedule-card-title {
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.35rem;
+        }
+
+        .schedule-card-windows {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .schedule-card-status {
+            font-size: 0.85rem;
+            margin-top: 0.4rem;
+            color: var(--text-secondary);
+        }
+
+        .schedule-badge {
+            display: inline-block;
+            font-size: 0.78rem;
+            font-weight: 600;
+            padding: 0.1rem 0.5rem;
+            border-radius: 999px;
+            margin-right: 0.4rem;
+        }
+        .schedule-badge.blocked { background: rgba(210, 20, 25, 0.15); color: #d21419; }
+        .schedule-badge.allowed { background: rgba(40, 167, 69, 0.15); color: #28a745; }
+        .schedule-badge.disabled { background: var(--border-color); color: var(--text-secondary); }
+
+        .schedule-card-actions { display: flex; gap: 0.5rem; align-items: center; flex-shrink: 0; }
+
+        .schedule-editor {
+            border-top: 1px solid var(--border-color);
+            padding-top: 1.25rem;
+        }
+
+        .schedule-editor-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .schedule-editor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .schedule-field label { display: block; font-weight: 600; color: var(--text-primary); margin-bottom: 0.4rem; font-size: 0.9rem; }
+        .schedule-field select,
+        .schedule-field input[type="text"] {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            background: var(--bg-tertiary);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            font-family: inherit;
+        }
+        .schedule-field-check { display: flex; align-items: flex-end; }
+        .schedule-field-check label { font-weight: 600; display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.6rem; }
+
+        .schedule-window {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 0.9rem 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .schedule-days {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem 0.9rem;
+            margin-bottom: 0.75rem;
+        }
+        .schedule-days label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.88rem;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
+        .schedule-times {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem 0.75rem;
+        }
+        .schedule-times label { font-size: 0.88rem; color: var(--text-secondary); }
+        .schedule-times input[type="time"] {
+            padding: 0.45rem 0.6rem;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+        }
+        .schedule-times .btn { margin-left: auto; }
+
+        .schedule-editor-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 0.25rem; }
+
+        .schedule-empty { color: var(--text-secondary); font-size: 0.9rem; padding: 0.5rem 0 1rem; }
+
         .youtube-router-action {
             flex-shrink: 0;
             display: flex;
@@ -1277,6 +1409,46 @@
                 <!-- Category Sections -->
                 <div id="categories"></div>
             </div>
+
+            <!-- Scheduled Blocking box -->
+            <div class="client-block-control-box schedule-control-box">
+                <h2 class="client-block-control-title" data-i18n="schedule-title">⏰ Scheduled Blocking</h2>
+                <p class="service-block-description" data-i18n="schedule-description">Automatically block a service during recurring weekly windows (e.g. LINE Mon–Fri 14:00→04:00). A window whose end time is earlier than its start wraps past midnight. Manual block/unblock stays in effect until the next scheduled change.</p>
+
+                <div id="schedule-list" class="schedule-list"></div>
+
+                <div class="schedule-editor">
+                    <h3 class="schedule-editor-title" data-i18n="schedule-editor-title">Add / edit schedule</h3>
+                    <div class="schedule-editor-grid">
+                        <div class="schedule-field">
+                            <label for="schedule-router-select" data-i18n="schedule-router">Router</label>
+                            <select id="schedule-router-select" onchange="onScheduleTargetChange()"></select>
+                        </div>
+                        <div class="schedule-field">
+                            <label for="schedule-service-select" data-i18n="schedule-service">Service</label>
+                            <select id="schedule-service-select" onchange="onScheduleTargetChange()"></select>
+                        </div>
+                        <div class="schedule-field">
+                            <label for="schedule-timezone" data-i18n="schedule-timezone">Timezone</label>
+                            <input type="text" id="schedule-timezone" value="Asia/Tokyo" spellcheck="false">
+                        </div>
+                        <div class="schedule-field schedule-field-check">
+                            <label><input type="checkbox" id="schedule-enabled" checked> <span data-i18n="schedule-enabled">Enabled</span></label>
+                        </div>
+                    </div>
+                    <div id="schedule-windows"></div>
+                    <div class="schedule-editor-actions">
+                        <button class="btn btn-secondary" onclick="addScheduleWindow()">
+                            <span class="material-icons" style="font-size: 18px;">add</span>
+                            <span data-i18n="schedule-add-window">Add window</span>
+                        </button>
+                        <button class="btn btn-block" onclick="saveSchedule()">
+                            <span class="material-icons" style="font-size: 18px;">save</span>
+                            <span data-i18n="schedule-save">Save schedule</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
         <p class="footer">Created by Karubits &mdash; Version {{ app_version }} &mdash; {{ app_version_date }}</p>
     </div>
@@ -1355,7 +1527,33 @@
                 'service-unblocked-success': '{service} unblocked on {routers}!',
                 'status-timer': '⏱️ Enabled ({time})',
                 'enabling-youtube-timer': 'Enabling YouTube for {minutes}m on {router}...',
-                'youtube-timer-success': 'YouTube enabled for {minutes}m on {routers}!'
+                'youtube-timer-success': 'YouTube enabled for {minutes}m on {routers}!',
+                'schedule-title': '⏰ Scheduled Blocking',
+                'schedule-description': 'Automatically block a service during recurring weekly windows (e.g. LINE Mon–Fri 14:00→04:00). A window whose end time is earlier than its start wraps past midnight. Manual block/unblock stays in effect until the next scheduled change.',
+                'schedule-editor-title': 'Add / edit schedule',
+                'schedule-router': 'Router',
+                'schedule-service': 'Service',
+                'schedule-timezone': 'Timezone',
+                'schedule-enabled': 'Enabled',
+                'schedule-add-window': 'Add window',
+                'schedule-save': 'Save schedule',
+                'schedule-remove': 'Remove',
+                'schedule-edit': 'Edit',
+                'schedule-delete': 'Delete',
+                'schedule-from': 'From',
+                'schedule-to': 'To',
+                'schedule-none': 'No schedules configured yet. Use the form below to add one.',
+                'schedule-no-windows': 'No windows',
+                'schedule-blocked-now': 'Blocked now',
+                'schedule-allowed-now': 'Allowed now',
+                'schedule-disabled': 'Disabled',
+                'schedule-next-change': 'next change {time}',
+                'schedule-saved': 'Schedule saved for {service} on {router}!',
+                'schedule-deleted': 'Schedule removed for {service} on {router}!',
+                'schedule-confirm-delete': 'Remove the schedule for "{service}" on {router}?',
+                'schedule-need-window': 'Add at least one window with days and times before saving.',
+                'day-mon': 'Mon', 'day-tue': 'Tue', 'day-wed': 'Wed', 'day-thu': 'Thu',
+                'day-fri': 'Fri', 'day-sat': 'Sat', 'day-sun': 'Sun'
             },
             ja: {
                 'title': '🔒 ルーターブロック制御',
@@ -1428,7 +1626,33 @@
                 'service-unblocked-success': '{routers}で{service}のブロックを解除しました！',
                 'status-timer': '⏱️ 許可中({time})',
                 'enabling-youtube-timer': '{router}でYouTubeを{minutes}分間許可中...',
-                'youtube-timer-success': '{routers}でYouTubeを{minutes}分間許可しました！'
+                'youtube-timer-success': '{routers}でYouTubeを{minutes}分間許可しました！',
+                'schedule-title': '⏰ スケジュールブロック',
+                'schedule-description': '毎週の指定時間帯にサービスを自動的にブロックします（例：LINE 月〜金 14:00→04:00）。終了時刻が開始時刻より前の場合は深夜をまたぎます。手動でのブロック/解除は次のスケジュール変更まで維持されます。',
+                'schedule-editor-title': 'スケジュールの追加 / 編集',
+                'schedule-router': 'ルーター',
+                'schedule-service': 'サービス',
+                'schedule-timezone': 'タイムゾーン',
+                'schedule-enabled': '有効',
+                'schedule-add-window': '時間帯を追加',
+                'schedule-save': 'スケジュールを保存',
+                'schedule-remove': '削除',
+                'schedule-edit': '編集',
+                'schedule-delete': '削除',
+                'schedule-from': '開始',
+                'schedule-to': '終了',
+                'schedule-none': 'スケジュールはまだ設定されていません。下のフォームから追加してください。',
+                'schedule-no-windows': '時間帯なし',
+                'schedule-blocked-now': '現在ブロック中',
+                'schedule-allowed-now': '現在許可中',
+                'schedule-disabled': '無効',
+                'schedule-next-change': '次の変更 {time}',
+                'schedule-saved': '{router}の{service}のスケジュールを保存しました！',
+                'schedule-deleted': '{router}の{service}のスケジュールを削除しました！',
+                'schedule-confirm-delete': '{router}の「{service}」のスケジュールを削除しますか？',
+                'schedule-need-window': '保存する前に、曜日と時刻を含む時間帯を少なくとも1つ追加してください。',
+                'day-mon': '月', 'day-tue': '火', 'day-wed': '水', 'day-thu': '木',
+                'day-fri': '金', 'day-sat': '土', 'day-sun': '日'
             }
         };
 
@@ -1450,6 +1674,18 @@
         let lineStatusByRouter = [];
         /** Active YouTube timers from backend: { [router_host]: { expires_at, remaining_seconds } } */
         let youtubeTimers = {};
+        /** Schedules document: { version, routers: { host: { service: {enabled, timezone, windows} } } } */
+        let schedulesDoc = { version: 1, routers: {} };
+        let scheduleServices = [];   // [{id, name}]
+        let scheduleRouters = [];    // [{host, name}]
+        let schedulesStatus = {};    // { host: { service: {enabled, blocked_now, next_change, timezone} } }
+        let editWindows = [];        // working copy of the window list in the editor
+        const SCHEDULE_DAYS = [
+            { key: 'mon', i18n: 'day-mon' }, { key: 'tue', i18n: 'day-tue' },
+            { key: 'wed', i18n: 'day-wed' }, { key: 'thu', i18n: 'day-thu' },
+            { key: 'fri', i18n: 'day-fri' }, { key: 'sat', i18n: 'day-sat' },
+            { key: 'sun', i18n: 'day-sun' }
+        ];
 
         // Initialize theme and language
         function init() {
@@ -1485,6 +1721,7 @@
             if (document.getElementById('youtube-router-list')) renderYouTubeSection();
             if (document.getElementById('roblox-router-list')) renderRobloxSection();
             if (document.getElementById('line-router-list')) renderLineSection();
+            if (document.getElementById('schedule-list')) renderSchedules();
         }
 
         function changeLanguage() {
@@ -1538,6 +1775,7 @@
                 await loadYouTubeStatus();
                 await loadRobloxStatus();
                 await loadLineStatus();
+                await loadSchedules();
 
                 renderUI();
             } catch (error) {
@@ -2076,6 +2314,7 @@
             renderYouTubeSection();
             renderRobloxSection();
             renderLineSection();
+            renderSchedules();
         }
 
         async function blockAll() {
@@ -2328,6 +2567,246 @@
             }
             const router = routers.find(r => r.host === routerValue);
             return router ? (router.name || router.host) : routerValue;
+        }
+
+        // ---------------- Scheduled blocking ----------------
+
+        async function loadSchedules() {
+            try {
+                const [schedRes, statusRes] = await Promise.all([
+                    fetch('/api/schedules'),
+                    fetch('/api/schedules/status')
+                ]);
+                if (schedRes.ok) {
+                    const data = await schedRes.json();
+                    schedulesDoc = data.schedules && data.schedules.routers
+                        ? data.schedules : { version: 1, routers: {} };
+                    scheduleServices = data.services || [];
+                    scheduleRouters = data.routers || [];
+                } else {
+                    schedulesDoc = { version: 1, routers: {} };
+                    scheduleServices = [];
+                    scheduleRouters = [];
+                }
+                schedulesStatus = statusRes.ok ? ((await statusRes.json()).status || {}) : {};
+            } catch (error) {
+                console.error('Error loading schedules:', error);
+                schedulesDoc = { version: 1, routers: {} };
+                schedulesStatus = {};
+            }
+        }
+
+        function routerLabel(host) {
+            const r = scheduleRouters.find(r => r.host === host);
+            return r ? (r.name || r.host) : host;
+        }
+
+        function serviceLabel(id) {
+            const s = scheduleServices.find(s => s.id === id);
+            return s ? s.name : id;
+        }
+
+        function formatWindowSummary(win) {
+            const days = SCHEDULE_DAYS.filter(d => (win.days || []).includes(d.key)).map(d => t(d.i18n)).join(' ');
+            return `${days} &nbsp;${escapeHtml(win.start)}–${escapeHtml(win.end)}`;
+        }
+
+        function formatNextChange(iso) {
+            if (!iso) return '';
+            try {
+                const d = new Date(iso);
+                const time = d.toLocaleString(currentLanguage === 'ja' ? 'ja-JP' : 'en-GB', {
+                    weekday: 'short', hour: '2-digit', minute: '2-digit'
+                });
+                return t('schedule-next-change', { time });
+            } catch (e) { return ''; }
+        }
+
+        function renderSchedules() {
+            const listEl = document.getElementById('schedule-list');
+            if (!listEl) return;
+
+            // Populate editor dropdowns (preserve current selection where possible).
+            const routerSel = document.getElementById('schedule-router-select');
+            const serviceSel = document.getElementById('schedule-service-select');
+            const prevRouter = routerSel.value;
+            const prevService = serviceSel.value;
+            routerSel.innerHTML = scheduleRouters.map(r =>
+                `<option value="${escapeHtml(r.host)}">${escapeHtml(r.name || r.host)}</option>`).join('');
+            serviceSel.innerHTML = scheduleServices.map(s =>
+                `<option value="${escapeHtml(s.id)}">${escapeHtml(s.name)}</option>`).join('');
+            if (prevRouter && scheduleRouters.some(r => r.host === prevRouter)) routerSel.value = prevRouter;
+            if (prevService && scheduleServices.some(s => s.id === prevService)) serviceSel.value = prevService;
+
+            // Render the list of configured schedules.
+            const rows = [];
+            Object.keys(schedulesDoc.routers || {}).sort().forEach(host => {
+                const svcMap = schedulesDoc.routers[host] || {};
+                Object.keys(svcMap).sort().forEach(service => {
+                    const sched = svcMap[service];
+                    const st = (schedulesStatus[host] || {})[service] || {};
+                    let badge;
+                    if (!sched.enabled) {
+                        badge = `<span class="schedule-badge disabled">${t('schedule-disabled')}</span>`;
+                    } else if (st.blocked_now) {
+                        badge = `<span class="schedule-badge blocked">${t('schedule-blocked-now')}</span>`;
+                    } else {
+                        badge = `<span class="schedule-badge allowed">${t('schedule-allowed-now')}</span>`;
+                    }
+                    const windows = (sched.windows && sched.windows.length)
+                        ? sched.windows.map(w => `<div>${formatWindowSummary(w)}</div>`).join('')
+                        : `<div>${t('schedule-no-windows')}</div>`;
+                    const nextChange = sched.enabled ? formatNextChange(st.next_change) : '';
+                    rows.push(`
+                        <div class="schedule-card">
+                            <div class="schedule-card-info">
+                                <div class="schedule-card-title">${escapeHtml(serviceLabel(service))} · ${escapeHtml(routerLabel(host))}</div>
+                                <div class="schedule-card-windows">${windows}</div>
+                                <div class="schedule-card-status">${badge}${nextChange ? escapeHtml(nextChange) + ' · ' : ''}${escapeHtml(sched.timezone || '')}</div>
+                            </div>
+                            <div class="schedule-card-actions">
+                                <button class="btn btn-secondary" onclick="editSchedule('${escapeHtml(host)}','${escapeHtml(service)}')">
+                                    <span class="material-icons" style="font-size: 18px;">edit</span>
+                                    <span>${t('schedule-edit')}</span>
+                                </button>
+                                <button class="btn btn-unblock" onclick="deleteSchedule('${escapeHtml(host)}','${escapeHtml(service)}')">
+                                    <span class="material-icons" style="font-size: 18px;">delete</span>
+                                    <span>${t('schedule-delete')}</span>
+                                </button>
+                            </div>
+                        </div>`);
+                });
+            });
+            listEl.innerHTML = rows.length ? rows.join('') : `<div class="schedule-empty">${t('schedule-none')}</div>`;
+
+            // Seed the editor windows once (don't clobber in-progress edits on re-render).
+            if (document.getElementById('schedule-windows').children.length === 0 && scheduleRouters.length && scheduleServices.length) {
+                onScheduleTargetChange();
+            }
+        }
+
+        function renderScheduleWindows() {
+            const wrap = document.getElementById('schedule-windows');
+            wrap.innerHTML = editWindows.map((w, i) => `
+                <div class="schedule-window" data-idx="${i}">
+                    <div class="schedule-days">
+                        ${SCHEDULE_DAYS.map(d => `
+                            <label><input type="checkbox" class="sched-day" value="${d.key}" ${(w.days || []).includes(d.key) ? 'checked' : ''}> ${t(d.i18n)}</label>
+                        `).join('')}
+                    </div>
+                    <div class="schedule-times">
+                        <label>${t('schedule-from')}</label>
+                        <input type="time" class="sched-start" value="${escapeHtml(w.start || '')}">
+                        <label>${t('schedule-to')}</label>
+                        <input type="time" class="sched-end" value="${escapeHtml(w.end || '')}">
+                        <button class="btn btn-unblock" onclick="removeScheduleWindow(${i})">
+                            <span class="material-icons" style="font-size: 18px;">close</span>
+                            <span>${t('schedule-remove')}</span>
+                        </button>
+                    </div>
+                </div>`).join('');
+        }
+
+        function collectWindowsFromDOM() {
+            return Array.from(document.querySelectorAll('#schedule-windows .schedule-window')).map(row => ({
+                days: Array.from(row.querySelectorAll('.sched-day:checked')).map(c => c.value),
+                start: row.querySelector('.sched-start').value,
+                end: row.querySelector('.sched-end').value
+            }));
+        }
+
+        function onScheduleTargetChange() {
+            const host = document.getElementById('schedule-router-select').value;
+            const service = document.getElementById('schedule-service-select').value;
+            const sched = ((schedulesDoc.routers || {})[host] || {})[service];
+            if (sched) {
+                document.getElementById('schedule-enabled').checked = sched.enabled !== false;
+                document.getElementById('schedule-timezone').value = sched.timezone || 'Asia/Tokyo';
+                editWindows = (sched.windows || []).map(w => ({ days: [...(w.days || [])], start: w.start, end: w.end }));
+            } else {
+                document.getElementById('schedule-enabled').checked = true;
+                document.getElementById('schedule-timezone').value = 'Asia/Tokyo';
+                editWindows = [];
+            }
+            if (editWindows.length === 0) {
+                editWindows = [{ days: ['mon', 'tue', 'wed', 'thu', 'fri'], start: '14:00', end: '04:00' }];
+            }
+            renderScheduleWindows();
+        }
+
+        function addScheduleWindow() {
+            editWindows = collectWindowsFromDOM();
+            editWindows.push({ days: [], start: '14:00', end: '04:00' });
+            renderScheduleWindows();
+        }
+
+        function removeScheduleWindow(idx) {
+            editWindows = collectWindowsFromDOM();
+            editWindows.splice(idx, 1);
+            renderScheduleWindows();
+        }
+
+        function editSchedule(host, service) {
+            document.getElementById('schedule-router-select').value = host;
+            document.getElementById('schedule-service-select').value = service;
+            onScheduleTargetChange();
+            document.querySelector('.schedule-editor').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        async function saveSchedule() {
+            const host = document.getElementById('schedule-router-select').value;
+            const service = document.getElementById('schedule-service-select').value;
+            if (!host || !service) return;
+            const enabled = document.getElementById('schedule-enabled').checked;
+            const timezone = document.getElementById('schedule-timezone').value.trim() || 'Asia/Tokyo';
+            const windows = collectWindowsFromDOM()
+                .filter(w => w.days.length && w.start && w.end);
+            if (windows.length === 0) {
+                showAlert(t('schedule-need-window'), 'error');
+                return;
+            }
+            // Merge into the working document and PUT the whole thing (replace-all).
+            const doc = JSON.parse(JSON.stringify(schedulesDoc));
+            doc.routers = doc.routers || {};
+            doc.routers[host] = doc.routers[host] || {};
+            doc.routers[host][service] = { enabled, timezone, windows };
+            try {
+                const res = await fetch('/api/schedules', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ routers: doc.routers })
+                });
+                const result = await res.json();
+                if (!res.ok || result.error) throw new Error(result.error || 'Save failed');
+                await loadSchedules();
+                renderSchedules();
+                showAlert(t('schedule-saved', { service: serviceLabel(service), router: routerLabel(host) }), 'success');
+            } catch (error) {
+                showAlert(t('error', { error: error.message }), 'error');
+            }
+        }
+
+        async function deleteSchedule(host, service) {
+            if (!confirm(t('schedule-confirm-delete', { service: serviceLabel(service), router: routerLabel(host) }))) return;
+            const doc = JSON.parse(JSON.stringify(schedulesDoc));
+            if (doc.routers && doc.routers[host]) {
+                delete doc.routers[host][service];
+                if (Object.keys(doc.routers[host]).length === 0) delete doc.routers[host];
+            }
+            try {
+                const res = await fetch('/api/schedules', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ routers: doc.routers || {} })
+                });
+                const result = await res.json();
+                if (!res.ok || result.error) throw new Error(result.error || 'Delete failed');
+                await loadSchedules();
+                renderSchedules();
+                showAlert(t('schedule-deleted', { service: serviceLabel(service), router: routerLabel(host) }), 'success');
+            } catch (error) {
+                showAlert(t('error', { error: error.message }), 'error');
+            }
         }
 
         function showAlert(message, type) {

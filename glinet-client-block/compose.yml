@@ -6,9 +6,14 @@ services:
      - "5000:5000"
     volumes:
       - ./config:/config:ro
+      # Writable store for recurring block schedules (schedules.json + runtime state).
+      # The /config mount is read-only, so schedules live here instead.
+      - ./data:/data
     environment:
       - SECRET_KEY=${SECRET_KEY:-change-this-secret-key-in-production}
       - WEBUI_PASSWORD=${WEBUI_PASSWORD:-admin}
+      # Directory for schedule config + runtime state (must be writable).
+      - DATA_DIR=/data
       # Router configuration - use one of these methods:
       # Method 1: Comma-separated lists
       # - ROUTER_HOSTS=100.65.142.110,100.122.185.100

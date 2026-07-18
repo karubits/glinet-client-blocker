@@ -67,3 +67,7 @@ config/config.yaml
 config/services.yml
 !config/services.example.yml
 
+# Writable schedule store (runtime state; created at runtime)
+data/*
+!data/.gitkeep
+
